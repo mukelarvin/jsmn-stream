@@ -8,20 +8,25 @@
 extern "C" {
 #endif
 
+#define JSMN_STREAM_TOKEN_UNDEFINED -1
+#define JSMN_STREAM_POSITION_UNDEFINED -1
+
 enum jsmn_stream_token_error {
   JSMN_STREAM_TOKEN_ERROR_NONE = 0,
   JSMN_STREAM_TOKEN_ERROR_NOMEM = -1,
-  JSMN_STREAM_TOKEN_ERROR_INVAL = -2,
-  JSMN_STREAM_TOKEN_ERROR_PART = -3,
-  JSMN_STREAM_TOKEN_ERROR_MAX = 0x7FFFFFFF
+  JSMN_STREAM_TOKEN_ERROR_INVALID = -2,
 };
 
+/**
+ * @brief
+ * 
+ */
 typedef struct jsmn_streamtok {
   jsmn_streamtype_t type;
-  int start;
-  int end;
-  int size;
-  int parent;
+  int start; // start position in the JSON data string
+  int end; // end position in the JSON data string
+  int size; // number of child (nested) tokens
+  int parent; // parent token index in the JSON data string
 } jsmn_streamtok_t;
 
 typedef struct {
@@ -30,7 +35,7 @@ typedef struct {
   int next_token;
   int num_tokens;
   int char_count;
-  int toksuper;
+  int super_token_id;
   int error;
 } jsmn_stream_token_parser_t;
 
