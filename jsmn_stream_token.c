@@ -152,7 +152,7 @@ static void jsmn_stream_parse_tokens_end_array(void *user_arg)
 		
 		token->end = jsmn_stream_parser->char_count; 
 
-		// make the parent of the array the new super token
+		// make the array the new super token
 		jsmn_stream_parser->super_token_id = super_token_id;
 	}
 }
@@ -200,7 +200,7 @@ static void jsmn_stream_parse_tokens_end_object(void *user_arg)
 
 		token->end = jsmn_stream_parser->char_count;
 
-		// make the parent the new super token
+		// make the object the new super token
 		jsmn_stream_parser->super_token_id = super_token_id;
 	}
 }
