@@ -108,7 +108,6 @@ static jsmn_streamtok_t *jsmn_stream_get_super_token(jsmn_stream_token_parser_t 
 	return &jsmn_stream_parser->tokens[jsmn_stream_parser->super_token_id];
 }
 
-
 /**
  * @brief Callback used when an array is started.
  * 
