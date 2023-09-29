@@ -22,11 +22,12 @@ enum jsmn_stream_token_error {
  * 
  */
 typedef struct jsmn_streamtok {
+  int id; // token id. Useful when using pointers instead of array indexes
   jsmn_streamtype_t type;
   int start; // start position in the JSON data string
   int end; // end position in the JSON data string
   int size; // number of child (nested) tokens
-  int parent; // parent token index in the JSON data string
+  int parent_id; // parent token id in the JSON data string
 } jsmn_streamtok_t;
 
 typedef struct {
