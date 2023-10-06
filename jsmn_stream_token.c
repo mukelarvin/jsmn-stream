@@ -3,6 +3,7 @@
 
 static jsmn_streamtok_t *jsmn_stream_allocate_token(jsmn_stream_token_parser_t *jsmn_stream_parser);
 static jsmn_streamtok_t *jsmn_stream_get_super_token(jsmn_stream_token_parser_t *jsmn_stream_parser);
+static jsmn_streamtok_t *jsmn_stream_get_super_collection_token(jsmn_stream_token_parser_t *jsmn_stream_parser, jsmn_streamtok_t *token);
 static void jsmn_stream_parse_tokens_start_array(void *user_arg);
 static void jsmn_stream_parse_tokens_end_array(void *user_arg);
 static void jsmn_stream_parse_tokens_start_object(void *user_arg);
@@ -111,6 +112,27 @@ static jsmn_streamtok_t *jsmn_stream_get_super_token(jsmn_stream_token_parser_t 
 }
 
 /**
+ * @brief Get the object or array that is superior to the current token.
+ * 
+ * @param jsmn_stream_parser 
+ * @param token 
+ * @return jsmn_streamtok_t* 
+ */
+static jsmn_streamtok_t *jsmn_stream_get_super_collection_token(jsmn_stream_token_parser_t *jsmn_stream_parser, jsmn_streamtok_t *token)
+{
+	while (token->parent_id	> JSMN_STREAM_TOKEN_UNDEFINED)
+	{
+		token = &jsmn_stream_parser->tokens[token->parent_id];
+		if ((token->type == JSMN_STREAM_ARRAY) || (token->type == JSMN_STREAM_OBJECT))
+		{
+			break;
+		}
+	}
+
+	return token;
+}
+
+/**
  * @brief Callback used when an array is started.
  * 
  * @param user_arg is a pointer to the jsmn_stream_token_parser_t object.
@@ -125,8 +147,7 @@ static void jsmn_stream_parse_tokens_start_array(void *user_arg)
 		token->type = JSMN_STREAM_ARRAY;
 		token->start = jsmn_stream_parser->char_count - 1;
 
-		// make this the new super token
-		jsmn_stream_parser->super_token_id = jsmn_stream_parser->next_token - 1;
+		jsmn_stream_parser->super_token_id = token->id;
 	}
 }
 
@@ -142,19 +163,9 @@ static void jsmn_stream_parse_tokens_end_array(void *user_arg)
 
 	if (token != NULL)
 	{
-		int super_token_id = token->parent_id;
-		// If the current super token is not pointing at the start of the array
-		// step back until we find the start of the array
-		while ((token->parent_id > JSMN_STREAM_TOKEN_UNDEFINED) && (token->type != JSMN_STREAM_ARRAY))
-		{
-			super_token_id = token->parent_id;
-			token = &jsmn_stream_parser->tokens[token->parent_id];
-		}
-		
-		token->end = jsmn_stream_parser->char_count; 
-
-		// make the array the new super token
-		jsmn_stream_parser->super_token_id = super_token_id;
+		token->end = jsmn_stream_parser->char_count;
+		token = jsmn_stream_get_super_collection_token(jsmn_stream_parser, token);
+		jsmn_stream_parser->super_token_id = token->id;
 	}
 }
 
@@ -173,8 +184,7 @@ static void jsmn_stream_parse_tokens_start_object(void *user_arg)
 		token->type = JSMN_STREAM_OBJECT;
 		token->start = jsmn_stream_parser->char_count - 1; 
 
-		// make this the new super token
-		jsmn_stream_parser->super_token_id = jsmn_stream_parser->next_token - 1;
+		jsmn_stream_parser->super_token_id = token->id;
 	}
 }
 
@@ -190,20 +200,9 @@ static void jsmn_stream_parse_tokens_end_object(void *user_arg)
 
 	if (token != NULL)
 	{
-		int super_token_id = token->parent_id;
-
-		// If the current super token is not pointing at the start of the object
-		// step back until we find it
-		while ((token->parent_id > JSMN_STREAM_TOKEN_UNDEFINED) && (token->type != JSMN_STREAM_OBJECT))
-		{
-			super_token_id = token->parent_id;
-			token = &jsmn_stream_parser->tokens[token->parent_id];
-		}
-
 		token->end = jsmn_stream_parser->char_count;
-
-		// make the object the new super token
-		jsmn_stream_parser->super_token_id = super_token_id;
+		token = jsmn_stream_get_super_collection_token(jsmn_stream_parser, token);
+		jsmn_stream_parser->super_token_id = token->id;
 	}
 }
 
@@ -226,8 +225,7 @@ static void jsmn_stream_parse_tokens_object_key(const char *key, size_t key_leng
 		token->end = jsmn_stream_parser->char_count - 1;
 		token->size = 0;
 
-		// make this the new super token
-		jsmn_stream_parser->super_token_id = jsmn_stream_parser->next_token - 1; 
+		jsmn_stream_parser->super_token_id = token->id;
 	}
 }
 
@@ -250,8 +248,8 @@ static void jsmn_stream_parse_tokens_string(const char *value, size_t length, vo
 		token->end = jsmn_stream_parser->char_count - 1;
 		token->size = 0;
 
-		// make the parent's (a key) parent (object or array) the new super token
-		jsmn_stream_parser->super_token_id = jsmn_stream_get_super_token(jsmn_stream_parser)->parent_id;
+		token = jsmn_stream_get_super_collection_token(jsmn_stream_parser, token);
+		jsmn_stream_parser->super_token_id = token->id;
 	}
 }
 
@@ -274,8 +272,7 @@ static void jsmn_stream_parse_tokens_primitive(const char *value, size_t length,
 		token->end = jsmn_stream_parser->char_count - 1;
 		token->size = length;
 
-		// make the parent's (a key) parent (object or array) the new super token
-		jsmn_stream_parser->super_token_id = jsmn_stream_get_super_token(jsmn_stream_parser)->parent_id;
+		token = jsmn_stream_get_super_collection_token(jsmn_stream_parser, token);
+		jsmn_stream_parser->super_token_id = token->id;
 	}
 }
-
