@@ -38,6 +38,17 @@ void jsmn_stream_parse_tokens_init(jsmn_stream_token_parser_t *jsmn_stream_parse
 	jsmn_stream_parser->super_token_id = JSMN_STREAM_TOKEN_UNDEFINED;
 	jsmn_stream_parser->error = JSMN_STREAM_TOKEN_ERROR_NONE;
 	jsmn_stream_init(&jsmn_stream_parser->stream_parser, &jsmn_stream_token_callbacks, jsmn_stream_parser);
+
+	for (uint32_t i = 0; i < (uint32_t)num_tokens; i++)
+	{
+		jsmn_streamtok_t *token = &tokens[i];
+		token->id = i;
+		token->type = JSMN_STREAM_UNDEFINED;
+		token->start = JSMN_STREAM_POSITION_UNDEFINED;
+		token->end = JSMN_STREAM_POSITION_UNDEFINED;
+		token->size = 0;
+		token->parent_id = JSMN_STREAM_TOKEN_UNDEFINED;
+	}
 }
 
 /**

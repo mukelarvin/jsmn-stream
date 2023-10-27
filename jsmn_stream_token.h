@@ -1,6 +1,7 @@
 #ifndef __JSMN_STREAM_TOKEN_H_
 #define __JSMN_STREAM_TOKEN_H_
 
+#include <stdint.h>
 #include <stdbool.h>
 #include "jsmn_stream.h"
 
