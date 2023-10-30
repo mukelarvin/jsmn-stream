@@ -31,6 +31,8 @@ typedef struct jsmn_streamtok {
   int parent_id; // parent token id in the JSON data string
 } jsmn_streamtok_t;
 
+typedef int32_t (*jsmn_stream_token_get_char_cb_t)(uint32_t index, size_t length, void *user_arg, char *ch);
+
 typedef struct {
   jsmn_stream_parser stream_parser;
   jsmn_streamtok_t *tokens;
@@ -39,6 +41,8 @@ typedef struct {
   int char_count;
   int super_token_id;
   int error;
+  jsmn_stream_token_get_char_cb_t cb;
+  void *user_arg;
 } jsmn_stream_token_parser_t;
 
 void jsmn_stream_parse_tokens_init(jsmn_stream_token_parser_t *parser, jsmn_streamtok_t *tokens, int num_tokens);
