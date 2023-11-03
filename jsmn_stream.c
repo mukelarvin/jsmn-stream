@@ -4,7 +4,6 @@
  */
 
 #include "jsmn_stream.h"
-
 #include <stdbool.h>
 
 #define JSMN_STREAM_CALLBACK(f, ...) if ((f) != NULL) { (f)(__VA_ARGS__); }
@@ -219,4 +218,3 @@ void jsmn_stream_init(jsmn_stream_parser *parser,
 	parser->callbacks = *callbacks;
 	parser->user_arg = user_arg;
 }
-

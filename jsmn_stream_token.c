@@ -11,7 +11,7 @@ static void jsmn_stream_parse_tokens_end_object(void *user_arg);
 static void jsmn_stream_parse_tokens_object_key(const char *key, size_t key_length, void *user_arg);
 static void jsmn_stream_parse_tokens_string(const char *value, size_t length, void *user_arg);
 static void jsmn_stream_parse_tokens_primitive(const char *value, size_t length, void *user_arg);
-
+	
 static jsmn_stream_callbacks_t jsmn_stream_token_callbacks = {
 	.start_array_callback = jsmn_stream_parse_tokens_start_array,
 	.end_array_callback = jsmn_stream_parse_tokens_end_array,
@@ -24,20 +24,21 @@ static jsmn_stream_callbacks_t jsmn_stream_token_callbacks = {
 
 /**
  * @brief Initialize the jsmn_stream_token_parser_t object.
+ * 	This in turn initializes the regular jsmn_stream_parser
  * 
- * @param jsmn_stream_parser 
+ * @param jsmn_stream_token_parser 
  * @param tokens 
  * @param num_tokens 
  */
-void jsmn_stream_parse_tokens_init(jsmn_stream_token_parser_t *jsmn_stream_parser, jsmn_streamtok_t *tokens, int num_tokens)
+void jsmn_stream_parse_tokens_init(jsmn_stream_token_parser_t *jsmn_stream_token_parser, jsmn_streamtok_t *tokens, int num_tokens)
 {
-	jsmn_stream_parser->tokens = tokens;
-	jsmn_stream_parser->num_tokens = num_tokens;
-	jsmn_stream_parser->next_token = 0;
-	jsmn_stream_parser->char_count = 0;
-	jsmn_stream_parser->super_token_id = JSMN_STREAM_TOKEN_UNDEFINED;
-	jsmn_stream_parser->error = JSMN_STREAM_TOKEN_ERROR_NONE;
-	jsmn_stream_init(&jsmn_stream_parser->stream_parser, &jsmn_stream_token_callbacks, jsmn_stream_parser);
+	jsmn_stream_token_parser->tokens = tokens;
+	jsmn_stream_token_parser->num_tokens = num_tokens;
+	jsmn_stream_token_parser->next_token = 0;
+	jsmn_stream_token_parser->char_count = 0;
+	jsmn_stream_token_parser->super_token_id = JSMN_STREAM_TOKEN_UNDEFINED;
+	jsmn_stream_token_parser->error = JSMN_STREAM_TOKEN_ERROR_NONE;
+	jsmn_stream_init(&jsmn_stream_token_parser->stream_parser, &jsmn_stream_token_callbacks, jsmn_stream_token_parser);
 
 	for (uint32_t i = 0; i < (uint32_t)num_tokens; i++)
 	{

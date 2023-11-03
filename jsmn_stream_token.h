@@ -45,7 +45,7 @@ typedef struct {
   void *user_arg;
 } jsmn_stream_token_parser_t;
 
-void jsmn_stream_parse_tokens_init(jsmn_stream_token_parser_t *parser, jsmn_streamtok_t *tokens, int num_tokens);
+void jsmn_stream_parse_tokens_init(jsmn_stream_token_parser_t *jsmn_stream_token_parser, jsmn_streamtok_t *tokens, int num_tokens);
 int jsmn_stream_parse_tokens(jsmn_stream_token_parser_t *parser, char c);
 
 #ifdef __cplusplus

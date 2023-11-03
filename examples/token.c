@@ -27,10 +27,10 @@ const char *json_data =
     "}";
 
 /**
- * @brief Pretend to you have a big file in flash or you are reading over a network.
+ * @brief Pretend that you have a big file in flash or you are reading over a network.
  * 
  * @param start_index 
- * @param size 
+ * @param size in bytes
  * @param buffer 
  */
 void pretend_to_read_a_file(int start_index, int size, char *buffer)
