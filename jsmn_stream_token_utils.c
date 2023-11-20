@@ -4,7 +4,7 @@
 
 static bool string_compare(const char *str1, const char *str2, size_t length);
 
-int32_t jsmn_stream_token_utils_parse_with_cb(jsmn_stream_token_parser_t *parser, size_t length, void *user_arg)
+int32_t jsmn_stream_token_utils_parse_with_cb(jsmn_stream_token_parser_t *parser, size_t length)
 {
     if (parser == NULL)
     {
@@ -14,7 +14,7 @@ int32_t jsmn_stream_token_utils_parse_with_cb(jsmn_stream_token_parser_t *parser
     for (uint32_t i = 0U; i < (uint32_t)length; i++)
     {
         char ch;
-        if (parser->cb(i, 1, user_arg, &ch) == JSMN_STREAM_TOKEN_GET_CHAR_CB_ERROR_NONE)
+        if (parser->cb(i, 1, parser->user_arg, &ch) == JSMN_STREAM_TOKEN_GET_CHAR_CB_ERROR_NONE)
         {
             if (jsmn_stream_parse_tokens(parser, ch) != JSMN_STREAM_TOKEN_ERROR_NONE)
             {
@@ -54,6 +54,39 @@ int32_t jsmn_stream_token_utils_array_get_next_object_token(jsmn_stream_token_pa
     return JSMN_STREAM_TOKEN_UTILS_ERROR_OBJECT_NOT_FOUND;
 }
 
+int32_t jsmn_stream_token_utils_get_token_by_key(jsmn_stream_token_parser_t *parser, jsmn_streamtok_t *parent, const char *key, jsmn_streamtok_t **key_token)
+{
+    if ((parser == NULL) 
+        || (parent == NULL) 
+        || (key == NULL)
+        || (key_token == NULL))
+    {
+        return JSMN_STREAM_TOKEN_ERROR_INVALID;
+    }
+
+    for (uint32_t i = parent->id; i < parser->num_tokens; i++)
+    {
+        jsmn_streamtok_t *token = parser->tokens + i;
+
+        if (token->type == JSMN_STREAM_KEY)
+        {
+            size_t string_length = (size_t)(token->end - token->start);
+            char buffer[string_length];
+
+            if (parser->cb(token->start, string_length, parser->user_arg, buffer) == JSMN_STREAM_TOKEN_GET_CHAR_CB_ERROR_NONE)
+            {
+                if (string_compare(buffer, key, string_length) == true)
+                {
+                    *key_token = token;
+                    return JSMN_STREAM_TOKEN_ERROR_NONE;
+                }
+            }
+        }
+    }
+
+    return JSMN_STREAM_TOKEN_UTILS_ERROR_KEY_NOT_FOUND;
+}
+
 int32_t jsmn_stream_token_utils_get_value_token_by_key(jsmn_stream_token_parser_t *parser, jsmn_streamtok_t *parent, const char *key, jsmn_streamtok_t **value_token)
 {
     if ((parser == NULL) 
@@ -64,23 +97,14 @@ int32_t jsmn_stream_token_utils_get_value_token_by_key(jsmn_stream_token_parser_
         return JSMN_STREAM_TOKEN_ERROR_INVALID;
     }
 
-    for (uint32_t i = parent->id; i < parser->num_tokens; i++)
+    jsmn_streamtok_t *key_token;
+    if (jsmn_stream_token_utils_get_token_by_key(parser, parent, key, &key_token) == JSMN_STREAM_TOKEN_ERROR_NONE)
     {
-        jsmn_streamtok_t *token = parser->tokens + i;
-
-        if (token->type == JSMN_STREAM_KEY)
-		{
-            size_t string_length = (size_t)(token->end - token->start);
-            char buffer[string_length];
-
-            if (parser->cb(token->start, string_length, parser->user_arg, buffer) == JSMN_STREAM_TOKEN_GET_CHAR_CB_ERROR_NONE)
-            {
-                if (string_compare(buffer, key, string_length) == true)
-                {
-                    *value_token = token + 1;
-                    return JSMN_STREAM_TOKEN_ERROR_NONE;
-                }
-            }
+        jsmn_streamtok_t *token = key_token + 1;
+        if (token->parent_id == key_token->id)
+        {
+            *value_token = token;
+            return JSMN_STREAM_TOKEN_ERROR_NONE;
         }
     }
 
@@ -252,4 +276,33 @@ int32_t jsmn_stream_token_utils_get_bool_by_key(jsmn_stream_token_parser_t *pars
     }
 
     return JSMN_STREAM_TOKEN_UTILS_ERROR_KEY_NOT_FOUND;
+}
+
+int32_t jsmn_stream_token_utils_get_object_containing_key_int(jsmn_stream_token_parser_t *token_parser, jsmn_streamtok_t *parent, const char *key, int32_t value, jsmn_streamtok_t **object_token)
+{
+    jsmn_streamtok_t *iterator_token = parent;
+
+    // Find the key token
+    while (jsmn_stream_token_utils_get_token_by_key(token_parser, iterator_token, key, &iterator_token) != JSMN_STREAM_TOKEN_UTILS_ERROR_KEY_NOT_FOUND)
+    {
+        // Get the value token
+        jsmn_streamtok_t *value_token = iterator_token + 1;
+        if (value_token->parent_id == iterator_token->id)
+        {
+            int32_t temp_value;
+            if (jsmn_stream_token_utils_get_int_from_token(token_parser, value_token, &temp_value) == JSMN_STREAM_TOKEN_UTILS_ERROR_NONE)
+            {
+                if (temp_value == value)
+                {
+                    *object_token = iterator_token;
+                    return JSMN_STREAM_TOKEN_UTILS_ERROR_NONE;
+                }
+            }
+        }
+        
+        // Move to the next token
+        iterator_token++;
+    }
+
+    return JSMN_STREAM_TOKEN_UTILS_ERROR_OBJECT_NOT_FOUND;
 }

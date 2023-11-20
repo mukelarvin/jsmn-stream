@@ -26,7 +26,8 @@ enum jsmn_stream_token_utils_error
 };
 
 
-int32_t jsmn_stream_token_utils_parse_with_cb(jsmn_stream_token_parser_t *parser, size_t length, void *user_arg);
+int32_t jsmn_stream_token_utils_parse_with_cb(jsmn_stream_token_parser_t *parser, size_t length);
+int32_t jsmn_stream_token_utils_get_token_by_key(jsmn_stream_token_parser_t *parser, jsmn_streamtok_t *parent, const char *key, jsmn_streamtok_t **key_token);
 int32_t jsmn_stream_token_utils_get_value_token_by_key(jsmn_stream_token_parser_t *parser, jsmn_streamtok_t *parent, const char *key, jsmn_streamtok_t **value_token);
 int32_t jsmn_stream_token_utils_array_get_next_object_token(jsmn_stream_token_parser_t *parser, jsmn_streamtok_t *parent, jsmn_streamtok_t **iterator_token);
 int32_t jsmn_stream_token_utils_get_string_from_token(jsmn_stream_token_parser_t *parser, jsmn_streamtok_t *token, char *buffer);
@@ -37,6 +38,7 @@ int32_t jsmn_stream_token_utils_get_double_from_token(jsmn_stream_token_parser_t
 int32_t jsmn_stream_token_utils_get_double_by_key(jsmn_stream_token_parser_t *parser, jsmn_streamtok_t *parent, const char *key, double *value);
 int32_t jsmn_stream_token_utils_get_bool_from_token(jsmn_stream_token_parser_t *parser, jsmn_streamtok_t *token, bool *value);
 int32_t jsmn_stream_token_utils_get_bool_by_key(jsmn_stream_token_parser_t *parser, jsmn_streamtok_t *parent, const char *key, bool *value);
+int32_t jsmn_stream_token_utils_get_object_containing_key_int(jsmn_stream_token_parser_t *token_parser, jsmn_streamtok_t *parent, const char *key, const int32_t value, jsmn_streamtok_t **object_token);
 
 #ifdef __cplusplus
 } /* extern "C" */
