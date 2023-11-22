@@ -2,7 +2,31 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#define NULL_SPACE 1
+
 static bool string_compare(const char *str1, const char *str2, size_t length);
+static void clear_buffer(char *buffer, size_t length);
+
+static bool string_compare(const char *str1, const char *str2, size_t length)
+{
+    for (uint32_t i = 0; i < length; i++)
+    {
+        if (str1[i] != str2[i])
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static void clear_buffer(char *buffer, size_t length)
+{
+    for (uint32_t i = 0; i < length; i++)
+    {
+        buffer[i] = 0;
+    }
+}
 
 int32_t jsmn_stream_token_utils_parse_with_cb(jsmn_stream_token_parser_t *parser, size_t length)
 {
@@ -71,7 +95,8 @@ int32_t jsmn_stream_token_utils_get_token_by_key(jsmn_stream_token_parser_t *par
         if (token->type == JSMN_STREAM_KEY)
         {
             size_t string_length = (size_t)(token->end - token->start);
-            char buffer[string_length];
+            char buffer[string_length + NULL_SPACE];
+            clear_buffer(buffer, sizeof(buffer));
 
             if (parser->cb(token->start, string_length, parser->user_arg, buffer) == JSMN_STREAM_TOKEN_GET_CHAR_CB_ERROR_NONE)
             {
@@ -109,19 +134,6 @@ int32_t jsmn_stream_token_utils_get_value_token_by_key(jsmn_stream_token_parser_
     }
 
     return JSMN_STREAM_TOKEN_UTILS_ERROR_KEY_NOT_FOUND;
-}
-
-static bool string_compare(const char *str1, const char *str2, size_t length)
-{
-    for (uint32_t i = 0; i < length; i++)
-    {
-        if (str1[i] != str2[i])
-        {
-            return false;
-        }
-    }
-
-    return true;
 }
 
 int32_t jsmn_stream_token_utils_get_string_from_token(jsmn_stream_token_parser_t *parser, jsmn_streamtok_t *token, char *buffer)
@@ -165,7 +177,9 @@ int32_t jsmn_stream_token_utils_get_int_from_token(jsmn_stream_token_parser_t *p
     }
 
     size_t string_length = (size_t)(token->end - token->start);
-    char buffer[string_length];
+    char buffer[string_length + NULL_SPACE];
+    clear_buffer(buffer, sizeof(buffer));
+
     if (parser->cb(token->start, string_length, parser->user_arg, buffer) == JSMN_STREAM_TOKEN_GET_CHAR_CB_ERROR_NONE)
     {
         *value = strtol(buffer, NULL, 10);
@@ -203,7 +217,9 @@ int32_t jsmn_stream_token_utils_get_double_from_token(jsmn_stream_token_parser_t
         }
     
         size_t string_length = (size_t)(token->end - token->start);
-        char buffer[string_length];
+        char buffer[string_length + NULL_SPACE];
+        clear_buffer(buffer, sizeof(buffer));
+
         if (parser->cb(token->start, string_length, parser->user_arg, buffer) == JSMN_STREAM_TOKEN_GET_CHAR_CB_ERROR_NONE)
         {
             *value = strtod(buffer, NULL);
@@ -241,7 +257,9 @@ int32_t jsmn_stream_token_utils_get_bool_from_token(jsmn_stream_token_parser_t *
     }
 
     size_t string_length = (size_t)(token->end - token->start);
-    char buffer[string_length];
+    char buffer[string_length + NULL_SPACE];
+    clear_buffer(buffer, sizeof(buffer));
+    
     if (parser->cb(token->start, string_length, parser->user_arg, buffer) == JSMN_STREAM_TOKEN_GET_CHAR_CB_ERROR_NONE)
     {
         if (string_compare(buffer, "true", string_length) == true)
