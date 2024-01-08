@@ -3,8 +3,7 @@
 #define JSMN_COMPATIBILITY_MODE 1
 
 /* The module to test */
-#include "jsmn_stream_token_utils.h"
-#include "jsmn_stream_token.h"
+#include "jsmn_stream_utils.h"
 #include "jsmn_stream.h"
 #include <stdint.h>
 #include <string.h>
@@ -32,7 +31,8 @@ const char* json_data = "{\n"
     "        {\n"
     "            \"port\": \"A\",\n"
     "            \"pin\": 1,\n"
-    "            \"enabled\": \"false\"\n"
+    "            \"enabled\": \"true\",\n"
+    "            \"offset\": -3\n"
     "        }\n"
     "    }\n"
     " ]\n"
@@ -56,154 +56,235 @@ void tearDown(void)
 
 }
 
-void test_jsmn_stream_token_utils_parse_with_cb_no_mem(void)
+void test_jsmn_stream_utils_get_value_token_by_key(void)
 {
-    jsmn_stream_token_parser_t parser;
-    parser.cb = get_char_cb;
-    parser.user_arg = (void *)json_data;
-    jsmn_streamtok_t tokens[30];
-    jsmn_stream_parse_tokens_init(&parser, tokens, 30);
+    new_jsmn_stream_token_parser_t parser;
+    jsmn_stream_token_t value_token;
+ 
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_init_parser(&parser, get_char_cb, strlen(json_data), (void *)json_data));
 
-    TEST_ASSERT_EQUAL(JSMN_STREAM_TOKEN_ERROR_NOMEM, jsmn_stream_token_utils_parse_with_cb(&parser, strlen(json_data)));
+    // first key
+    jsmn_stream_utils_init_token(&value_token);
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "operations", &value_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_ARRAY, value_token.type);
+    TEST_ASSERT_EQUAL_INT32(17, value_token.start_position);
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_POSITION_UNDEFINED, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(4, value_token.parent_position);
+
+    // first primitive
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "id", &value_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_PRIMITIVE, value_token.type);
+    TEST_ASSERT_EQUAL_INT32(39, value_token.start_position);
+    TEST_ASSERT_EQUAL_INT32(43, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(34, value_token.parent_position);
+
+    // first string
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "class", &value_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_STRING, value_token.type);
+    TEST_ASSERT_EQUAL_INT32(85, value_token.start_position);
+    TEST_ASSERT_EQUAL_INT32(88, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(76, value_token.parent_position);
+
+    // a string deeper down the tree
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "enabled", &value_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_STRING, value_token.type);
+    TEST_ASSERT_EQUAL_INT32(500, value_token.start_position);
+    TEST_ASSERT_EQUAL_INT32(504, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(489, value_token.parent_position);
+
+    // a string that doesn't exist
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_KEY_NOT_FOUND, jsmn_stream_utils_get_value_token_by_key(&parser, "does not exist", &value_token));
 }
 
-void test_jsmn_stream_token_utils_parse_with_cb_success(void)
+void test_jsmn_stream_utils_get_next_object_token(void)
 {
-    jsmn_stream_token_parser_t parser;
-    parser.cb = get_char_cb;
-    parser.user_arg = (void *)json_data;
-    jsmn_streamtok_t tokens[100];
-    jsmn_stream_parse_tokens_init(&parser, tokens, 100);
+    new_jsmn_stream_token_parser_t parser;
+    jsmn_stream_token_t array_token;
+    jsmn_stream_token_t value_token;
 
-    TEST_ASSERT_EQUAL(JSMN_STREAM_TOKEN_ERROR_NONE, jsmn_stream_token_utils_parse_with_cb(&parser, strlen(json_data)));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_init_parser(&parser, get_char_cb, strlen(json_data), (void *)json_data));
+
+    // get the array from the first key
+    jsmn_stream_utils_init_token(&value_token);
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "operations", &array_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_ARRAY, array_token.type);
+    TEST_ASSERT_EQUAL_INT32(17, array_token.start_position);
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_POSITION_UNDEFINED, array_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(4, array_token.parent_position);
+
+    // first object
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_next_object_token(&parser, &array_token, &value_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_OBJECT, value_token.type);
+    TEST_ASSERT_EQUAL_INT32(23, value_token.start_position);
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_POSITION_UNDEFINED, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(17, value_token.parent_position);
+
+    // second object
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_next_object_token(&parser, &array_token, &value_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_OBJECT, value_token.type);
+    TEST_ASSERT_EQUAL_INT32(280, value_token.start_position);
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_POSITION_UNDEFINED, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(17, value_token.parent_position);
+
+    // no third object at this depth
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_OBJECT_NOT_FOUND, jsmn_stream_utils_get_next_object_token(&parser, &array_token, &value_token));
 }
 
-/**
- * @brief Key search is currently case sensitive.
- * 
- */
-void test_jsmn_stream_token_utils_get_value_token_by_key_not_found(void)
+void test_jsmn_stream_utils_get_object_token_containing_kv(void)
 {
-    jsmn_stream_token_parser_t parser;
-    parser.cb = get_char_cb;
-    parser.user_arg = (void *)json_data;
-    jsmn_streamtok_t tokens[100];
-    jsmn_streamtok_t *value_token;
-    jsmn_stream_parse_tokens_init(&parser, tokens, 100);
-    jsmn_stream_token_utils_parse_with_cb(&parser, strlen(json_data));
+    new_jsmn_stream_token_parser_t parser;
+    jsmn_stream_token_t value_token;
 
-    TEST_ASSERT_EQUAL(JSMN_STREAM_TOKEN_UTILS_ERROR_KEY_NOT_FOUND, jsmn_stream_token_utils_get_value_token_by_key(&parser, tokens, "ID", &value_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_init_parser(&parser, get_char_cb, strlen(json_data), (void *)json_data));
+
+    // first object
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_object_token_containing_kv(&parser, "id", "1234", &value_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_OBJECT, value_token.type);
+    TEST_ASSERT_EQUAL_INT32(23, value_token.start_position);
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_POSITION_UNDEFINED, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(17, value_token.parent_position);
+
+    // second object
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_object_token_containing_kv(&parser, "id", "5678", &value_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_OBJECT, value_token.type);
+    TEST_ASSERT_EQUAL_INT32(280, value_token.start_position);
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_POSITION_UNDEFINED, value_token.end_position);
+    // TEST_ASSERT_EQUAL_INT32(17, value_token.parent_position); 
+
+    // no object with this key/value pair
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_OBJECT_NOT_FOUND, jsmn_stream_utils_get_object_token_containing_kv(&parser, "id", "9999", &value_token));
 }
 
-void test_jsmn_stream_token_utils_get_value_token_by_key_success(void)
+void test_jsmn_stream_utils_get_bool_from_token(void)
 {
-    jsmn_stream_token_parser_t parser;
-    parser.cb = get_char_cb;
-    parser.user_arg = (void *)json_data;
-    jsmn_streamtok_t tokens[100];
-    jsmn_streamtok_t *value_token;
-    jsmn_stream_parse_tokens_init(&parser, tokens, 100);
-    jsmn_stream_token_utils_parse_with_cb(&parser, strlen(json_data));
+    new_jsmn_stream_token_parser_t parser;
+    jsmn_stream_token_t value_token;
+    bool value;
 
-    TEST_ASSERT_EQUAL(JSMN_STREAM_TOKEN_ERROR_NONE, jsmn_stream_token_utils_get_value_token_by_key(&parser, tokens, "id", &value_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_init_parser(&parser, get_char_cb, strlen(json_data), (void *)json_data));
+
+    // find "enabled": true
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "enabled", &value_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_bool_from_token(&parser, &value_token, &value));
+    TEST_ASSERT_EQUAL_INT32(true, value);
 }
 
-void test_jsmn_stream_token_utils_array_get_next_object_token_success(void)
+void test_jsmn_stream_utils_get_bool_by_key(void)
 {
-    jsmn_stream_token_parser_t parser;
-    parser.cb = get_char_cb;
-    parser.user_arg = (void *)json_data;
-    jsmn_streamtok_t tokens[100];
-    jsmn_streamtok_t *array_token = NULL;
-    jsmn_streamtok_t *iterator_token = NULL;
-    jsmn_stream_parse_tokens_init(&parser, tokens, 100);
-    jsmn_stream_token_utils_parse_with_cb(&parser, strlen(json_data));
-    jsmn_stream_token_utils_get_value_token_by_key(&parser, tokens,"operations", &array_token);
-    TEST_ASSERT_EQUAL(JSMN_STREAM_TOKEN_ERROR_NONE, jsmn_stream_token_utils_array_get_next_object_token(&parser, array_token, &iterator_token));
-    TEST_ASSERT_EQUAL(JSMN_STREAM_OBJECT, iterator_token->type);
+    new_jsmn_stream_token_parser_t parser;
+    bool value;
+
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_init_parser(&parser, get_char_cb, strlen(json_data), (void *)json_data));
+
+    // find "enabled": true
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_bool_by_key(&parser, "enabled", &value));
+    TEST_ASSERT_EQUAL_INT32(true, value);
 }
 
-void test_jsmn_stream_token_utils_get_string_from_token(void)
+void test_jsmn_stream_utils_get_int_from_token(void)
 {
-    jsmn_stream_token_parser_t parser;
-    parser.cb = get_char_cb;
-    parser.user_arg = (void *)json_data;
-    jsmn_streamtok_t tokens[100];
-    jsmn_streamtok_t *value_token;
-    char buffer[100] = {0};
-    jsmn_stream_parse_tokens_init(&parser, tokens, 100);
-    jsmn_stream_token_utils_parse_with_cb(&parser, strlen(json_data));
-    jsmn_stream_token_utils_get_value_token_by_key(&parser, tokens, "class", &value_token);
-    TEST_ASSERT_EQUAL(JSMN_STREAM_TOKEN_ERROR_NONE, jsmn_stream_token_utils_get_string_from_token(&parser, value_token, buffer));
-    TEST_ASSERT_EQUAL_STRING("pwm", buffer);
-}
-
-void test_jsmn_stream_token_utils_get_int_from_token(void)
-{
-    jsmn_stream_token_parser_t parser;
-    parser.cb = get_char_cb;
-    parser.user_arg = (void *)json_data;
-    jsmn_streamtok_t tokens[100];
-    jsmn_streamtok_t *value_token;
+    new_jsmn_stream_token_parser_t parser;
+    jsmn_stream_token_t value_token;
     int32_t value;
-    jsmn_stream_parse_tokens_init(&parser, tokens, 100);
-    jsmn_stream_token_utils_parse_with_cb(&parser, strlen(json_data));
-    jsmn_stream_token_utils_get_value_token_by_key(&parser, tokens, "id", &value_token);
-    TEST_ASSERT_EQUAL(JSMN_STREAM_TOKEN_ERROR_NONE, jsmn_stream_token_utils_get_int_from_token(&parser, value_token, &value));
-    TEST_ASSERT_EQUAL(1234, value);
+
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_init_parser(&parser, get_char_cb, strlen(json_data), (void *)json_data));
+
+    // find "offset": -3
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "offset", &value_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_int_from_token(&parser, &value_token, &value));
+    TEST_ASSERT_EQUAL_INT32(-3, value);
 }
 
-void test_jsmn_stream_token_utils_get_double_from_token(void)
+void test_jsmn_stream_utils_get_int_by_key(void)
 {
-    jsmn_stream_token_parser_t parser;
-    parser.cb = get_char_cb;
-    parser.user_arg = (void *)json_data;
-    jsmn_streamtok_t tokens[100];
-    jsmn_streamtok_t *value_token;
+    new_jsmn_stream_token_parser_t parser;
+    int32_t value;
+
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_init_parser(&parser, get_char_cb, strlen(json_data), (void *)json_data));
+
+    // find "offset": -3
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_int_by_key(&parser, "offset", &value));
+    TEST_ASSERT_EQUAL_INT32(-3, value);
+}
+
+void test_jsmn_stream_utils_get_uint_from_token(void)
+{
+    new_jsmn_stream_token_parser_t parser;
+    jsmn_stream_token_t value_token;
+    uint32_t value;
+
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_init_parser(&parser, get_char_cb, strlen(json_data), (void *)json_data));
+
+    // find "id": 1234
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "id", &value_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_uint_from_token(&parser, &value_token, &value));
+    TEST_ASSERT_EQUAL_INT32(1234, value);
+}
+
+void test_jsmn_stream_utils_get_uint_by_key(void)
+{
+    new_jsmn_stream_token_parser_t parser;
+    uint32_t value;
+
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_init_parser(&parser, get_char_cb, strlen(json_data), (void *)json_data));
+    
+    // find "id": 1234
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_uint_by_key(&parser, "id", &value));
+    TEST_ASSERT_EQUAL_INT32(1234, value);
+}
+
+void test_jsmn_stream_utils_get_double_from_token(void)
+{
+    new_jsmn_stream_token_parser_t parser;
+    jsmn_stream_token_t value_token;
     double value;
-    jsmn_stream_parse_tokens_init(&parser, tokens, 100);
-    jsmn_stream_token_utils_parse_with_cb(&parser, strlen(json_data));
-    jsmn_stream_token_utils_get_value_token_by_key(&parser, tokens, "period", &value_token);
-    TEST_ASSERT_EQUAL(JSMN_STREAM_TOKEN_ERROR_NONE, jsmn_stream_token_utils_get_double_from_token(&parser, value_token, &value));
+
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_init_parser(&parser, get_char_cb, strlen(json_data), (void *)json_data));
+    
+    // find "period": 50.5
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "period", &value_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_double_from_token(&parser, &value_token, &value));
     TEST_ASSERT_EQUAL_DOUBLE(50.5, value);
 }
 
-void test_jsmn_stream_token_utils_get_bool_from_token(void)
+void test_jsmn_stream_utils_get_double_by_key(void)
 {
-    jsmn_stream_token_parser_t parser;
-    parser.cb = get_char_cb;
-    parser.user_arg = (void *)json_data;
-    jsmn_streamtok_t tokens[100];
-    jsmn_streamtok_t *value_token;
-    bool value;
-    jsmn_stream_parse_tokens_init(&parser, tokens, 100);
-    jsmn_stream_token_utils_parse_with_cb(&parser, strlen(json_data));
-    jsmn_stream_token_utils_get_value_token_by_key(&parser, tokens, "enabled", &value_token);
-    TEST_ASSERT_EQUAL(JSMN_STREAM_TOKEN_ERROR_NONE, jsmn_stream_token_utils_get_bool_from_token(&parser, value_token, &value));
-    TEST_ASSERT_EQUAL(false, value);
+    new_jsmn_stream_token_parser_t parser;
+    double value;
+
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_init_parser(&parser, get_char_cb, strlen(json_data), (void *)json_data));
+    
+    // find "period": 50.5
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_double_by_key(&parser, "period", &value));
+    TEST_ASSERT_EQUAL_DOUBLE(50.5, value);
 }
 
-/**
- * @brief Find the object containing the key and value, "id": 5678 at index 21
- * 
- */
-void test_jsmn_stream_token_utils_get_object_containing_key_int_success(void)
+void test_jsmn_stream_utils_get_string_from_token(void)
 {
-    jsmn_stream_token_parser_t parser;
-    parser.cb = get_char_cb;
-    parser.user_arg = (void *)json_data;
-    jsmn_streamtok_t tokens[100];
-    jsmn_streamtok_t *object_token = NULL;
-    char buffer[100] = {0};
-    int32_t value;
+    new_jsmn_stream_token_parser_t parser;
+    jsmn_stream_token_t value_token;
+    char buffer[32];
 
-    jsmn_stream_parse_tokens_init(&parser, tokens, 100);
-    jsmn_stream_token_utils_parse_with_cb(&parser, strlen(json_data));
+    memset(buffer, 0, sizeof(buffer));
+
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_init_parser(&parser, get_char_cb, strlen(json_data), (void *)json_data));
     
-    TEST_ASSERT_EQUAL(JSMN_STREAM_TOKEN_ERROR_NONE, jsmn_stream_token_utils_get_object_containing_key_int(&parser, tokens, "id", 5678, &object_token));
-    TEST_ASSERT_EQUAL_PTR(&tokens[21], object_token);
-    jsmn_stream_token_utils_get_string_from_token(&parser, object_token, buffer);
-    jsmn_stream_token_utils_get_int_from_token(&parser, object_token + 1, &value);
-    TEST_ASSERT_EQUAL_STRING("id", buffer);
-    TEST_ASSERT_EQUAL(5678, value);
+    // find "label": "instance of pwm"
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "label", &value_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_string_from_token(&parser, &value_token, buffer, sizeof(buffer)));
+    TEST_ASSERT_EQUAL_STRING("instance of pwm", buffer);
+}
+
+void test_jsmn_stream_utils_get_string_by_key(void)
+{
+    new_jsmn_stream_token_parser_t parser;
+    char buffer[32];
+
+    memset(buffer, 0, sizeof(buffer));
+
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_init_parser(&parser, get_char_cb, strlen(json_data), (void *)json_data));
+    
+    // find "label": "instance of pwm"
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_string_by_key(&parser, "label", buffer, sizeof(buffer)));
+    TEST_ASSERT_EQUAL_STRING("instance of pwm", buffer);
 }
