@@ -14,8 +14,8 @@ extern "C"
 
 enum get_char_callback_error
 {
-    JSMN_STREAM_TOKEN_GET_CHAR_CB_ERROR_NONE = 0,
-    JSMN_STREAM_TOKEN_GET_CHAR_CB_ERROR_FAIL = -1,
+    JSMN_STREAM_GET_CHAR_CB_ERROR_NONE = 0,
+    JSMN_STREAM_GET_CHAR_CB_ERROR_FAIL = -1,
 };
 
 enum jsmn_stream_utils_error
@@ -56,21 +56,22 @@ typedef struct new_jsmn_stream_token_parser
 
 int32_t jsmn_stream_utils_init_parser(new_jsmn_stream_token_parser_t *parser, get_char_callback_t get_char_callback, size_t json_length, void *user_arg);
 int32_t jsmn_stream_utils_init_token(jsmn_stream_token_t *token);
-int32_t jsmn_stream_utils_get_value_token_by_key(new_jsmn_stream_token_parser_t *token_parser, const char *key, jsmn_stream_token_t *value_token);
-int32_t jsmn_stream_utils_get_next_object_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, jsmn_stream_token_t *iterator_token);
-int32_t jsmn_stream_utils_get_object_token_containing_kv(new_jsmn_stream_token_parser_t *token_parser, const char *key, const char *value, jsmn_stream_token_t *object_token);
+int32_t jsmn_stream_utils_get_value_token_by_key(new_jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, jsmn_stream_token_t *value_token);
+int32_t jsmn_stream_utils_array_get_next_object_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, jsmn_stream_token_t *iterator_token);
+int32_t jsmn_stream_utils_object_get_next_kv_tokens(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, jsmn_stream_token_t *key_iterator_token, jsmn_stream_token_t *value_iterator_token);
+int32_t jsmn_stream_utils_get_object_token_containing_kv(new_jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, const char *value, jsmn_stream_token_t *object_token);
 
 // accessors
 int32_t jsmn_stream_utils_get_bool_from_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, bool *value);
-int32_t jsmn_stream_utils_get_bool_by_key(new_jsmn_stream_token_parser_t *token_parser, const char *key, bool *value);
+int32_t jsmn_stream_utils_get_bool_by_key(new_jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, bool *value);
 int32_t jsmn_stream_utils_get_int_from_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, int32_t *value);
-int32_t jsmn_stream_utils_get_int_by_key(new_jsmn_stream_token_parser_t *token_parser, const char *key, int32_t *value);
+int32_t jsmn_stream_utils_get_int_by_key(new_jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, int32_t *value);
 int32_t jsmn_stream_utils_get_uint_from_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, uint32_t *value);
-int32_t jsmn_stream_utils_get_uint_by_key(new_jsmn_stream_token_parser_t *token_parser, const char *key, uint32_t *value);
+int32_t jsmn_stream_utils_get_uint_by_key(new_jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, uint32_t *value);
 int32_t jsmn_stream_utils_get_double_from_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, double *value);
-int32_t jsmn_stream_utils_get_double_by_key(new_jsmn_stream_token_parser_t *token_parser, const char *key, double *value);
+int32_t jsmn_stream_utils_get_double_by_key(new_jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, double *value);
 int32_t jsmn_stream_utils_get_string_from_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, char *buffer, size_t buffer_size);
-int32_t jsmn_stream_utils_get_string_by_key(new_jsmn_stream_token_parser_t *token_parser, const char *key, char *buffer, size_t buffer_size);
+int32_t jsmn_stream_utils_get_string_by_key(new_jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, char *buffer, size_t buffer_size);
 
 #ifdef __cplusplus
 } /* extern "C" */
