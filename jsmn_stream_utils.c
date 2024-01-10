@@ -61,7 +61,7 @@ typedef struct array_get_next_object_user_arg
 {
     new_jsmn_stream_token_parser_t *token_parser;
     jsmn_stream_parser *stream_parser;
-    jsmn_stream_token_t *parent_token;
+    jsmn_stream_token_t *array_token;
     jsmn_stream_token_t *iterator_token;
     bool found_object;
 } array_get_next_object_user_arg_t;
@@ -402,19 +402,17 @@ static void array_get_size_end_array_callback(void *user_arg)
 {
     array_get_size_user_arg_t *arg = (array_get_size_user_arg_t *)user_arg;
 
-    if (arg->found_array)
-    {
-        if (arg->stream_parser->stack_height == arg->array_token->depth)
-        {
-            arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
-        }
-    }
+	if (arg->stream_parser->stack_height == arg->array_token->depth)
+	{
+		arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
+	}
+
 }
 
-int32_t jsmn_stream_utils_array_get_next_object_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, jsmn_stream_token_t *iterator_token)
+int32_t jsmn_stream_utils_array_get_next_object_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *array_token, jsmn_stream_token_t *iterator_token)
 {
     // check params
-    if (token_parser == NULL || parent_token == NULL || iterator_token == NULL)
+    if (token_parser == NULL || array_token == NULL || iterator_token == NULL)
     {
         return JSMN_STREAM_UTILS_ERROR_INVALID_PARAM;
     }
@@ -437,7 +435,7 @@ int32_t jsmn_stream_utils_array_get_next_object_token(new_jsmn_stream_token_pars
     {
         .token_parser = token_parser,
         .stream_parser = &stream_parser,
-        .parent_token = parent_token,
+        .array_token = array_token,
         .iterator_token = iterator_token,
         .found_object = false
     };
@@ -461,22 +459,29 @@ static void array_get_next_object_end_array_callback(void *user_arg)
 {
     array_get_next_object_user_arg_t *arg = (array_get_next_object_user_arg_t *)user_arg;
 
-    arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
-
+    // end of array is + 1 depth of array start
+	if (arg->stream_parser->stack_height == arg->array_token->depth + 1)
+	{
+        if (arg->token_parser->index > arg->array_token->start_position)
+        {
+            arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
+        }
+	}
 }
 
 static void array_get_next_object_start_object_callback(void *user_arg)
 {
     array_get_next_object_user_arg_t *arg = (array_get_next_object_user_arg_t *)user_arg;
 
-    // get to the right depth
-    if (arg->stream_parser->stack_height == arg->parent_token->depth + 1)
+    // get to the right depth and index
+    if ( (arg->stream_parser->stack_height == arg->array_token->depth + 1)
+    	&& (arg->token_parser->index > arg->array_token->start_position))
     {
         // get to the right object
         if (arg->token_parser->index > arg->iterator_token->start_position)
         {        
             // update token
-            arg->iterator_token->parent_position = arg->parent_token->start_position;
+            arg->iterator_token->parent_position = arg->array_token->start_position;
             arg->iterator_token->start_position = arg->token_parser->index;
             arg->iterator_token->end_position = JSMN_STREAM_POSITION_UNDEFINED;
             arg->iterator_token->type = JSMN_STREAM_OBJECT;
