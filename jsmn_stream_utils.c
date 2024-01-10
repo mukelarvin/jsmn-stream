@@ -5,12 +5,12 @@
 
 // forward declarations
 
-static int32_t parse_json(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_parser *stream_parser);
+static int32_t parse_json(jsmn_stream_token_parser_t *token_parser, jsmn_stream_parser *stream_parser);
 
 // get value by key helper structs and callbacks
 typedef struct get_value_token_by_key_user_arg
 {
-    new_jsmn_stream_token_parser_t *token_parser;
+    jsmn_stream_token_parser_t *token_parser;
     jsmn_stream_parser *stream_parser;
     uint32_t start_index;
     const char *key;
@@ -27,7 +27,7 @@ static void get_value_token_by_key_start_array_callback(void *user_arg);
 // array get size helper structs and callbacks
 typedef struct array_get_size_user_arg
 {
-    new_jsmn_stream_token_parser_t *token_parser;
+    jsmn_stream_token_parser_t *token_parser;
     jsmn_stream_parser *stream_parser;
     jsmn_stream_token_t *array_token;
     uint32_t size;
@@ -41,7 +41,7 @@ static void array_get_size_end_array_callback(void *user_arg);
 // object get size helper structs and callbacks
 typedef struct object_get_size_user_arg
 {
-    new_jsmn_stream_token_parser_t *token_parser;
+    jsmn_stream_token_parser_t *token_parser;
     jsmn_stream_parser *stream_parser;
     jsmn_stream_token_t *object_token;
     uint32_t size;
@@ -57,7 +57,7 @@ static void object_get_size_object_key_callback(const char *key, size_t key_leng
 // array get next object helper structs and callbacks
 typedef struct array_get_next_object_user_arg
 {
-    new_jsmn_stream_token_parser_t *token_parser;
+    jsmn_stream_token_parser_t *token_parser;
     jsmn_stream_parser *stream_parser;
     jsmn_stream_token_t *array_token;
     jsmn_stream_token_t *iterator_token;
@@ -70,7 +70,7 @@ static void array_get_next_object_start_object_callback(void *user_arg);
 // get next kv helper structs and callbacks
 typedef struct object_get_next_kv_user_arg
 {
-    new_jsmn_stream_token_parser_t *token_parser;
+    jsmn_stream_token_parser_t *token_parser;
     jsmn_stream_parser *stream_parser;
     jsmn_stream_token_t *parent_token;
     jsmn_stream_token_t *key_iterator_token;
@@ -86,7 +86,7 @@ static void object_get_next_kv_primitive_callback(const char *value, size_t leng
 // get object containing key/value helper structs and callbacks
 typedef struct get_object_token_containing_kv_arg
 {
-    new_jsmn_stream_token_parser_t *token_parser;
+    jsmn_stream_token_parser_t *token_parser;
     jsmn_stream_parser *stream_parser;
     uint32_t start_index;
     char *key;
@@ -104,7 +104,7 @@ static void get_object_token_containing_kv_primitive_callback(const char *value,
 
 
 
-int32_t jsmn_stream_utils_init_parser(new_jsmn_stream_token_parser_t *parser, get_char_callback_t get_char_callback, size_t json_length, void *user_arg)
+int32_t jsmn_stream_utils_init_parser(jsmn_stream_token_parser_t *parser, get_char_callback_t get_char_callback, size_t json_length, void *user_arg)
 {
     if (parser == NULL || get_char_callback == NULL || json_length == 0)
     {
@@ -137,7 +137,7 @@ int32_t jsmn_stream_utils_init_token(jsmn_stream_token_t *token)
 
 }
 
-static int32_t parse_json(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_parser *stream_parser)
+static int32_t parse_json(jsmn_stream_token_parser_t *token_parser, jsmn_stream_parser *stream_parser)
 {
     char ch[JSMN_STREAM_UTILS_PARSE_BUFFER_SIZE];
 
@@ -176,7 +176,7 @@ static int32_t parse_json(new_jsmn_stream_token_parser_t *token_parser, jsmn_str
 }
 
 
-int32_t jsmn_stream_utils_get_value_token_by_key(new_jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, jsmn_stream_token_t *value_token)
+int32_t jsmn_stream_utils_get_value_token_by_key(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, jsmn_stream_token_t *value_token)
 {
     // check params
     if (token_parser == NULL || key == NULL || value_token == NULL)
@@ -323,7 +323,7 @@ static void get_value_token_by_key_start_array_callback(void *user_arg)
 
 }
 
-int32_t jsmn_stream_utils_array_get_size(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, uint32_t *size)
+int32_t jsmn_stream_utils_array_get_size(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, uint32_t *size)
 {
     // check params
     if (token_parser == NULL || token == NULL || size == NULL)
@@ -404,7 +404,7 @@ static void array_get_size_end_array_callback(void *user_arg)
 
 }
 
-int32_t jsmn_stream_utils_array_get_next_object_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *array_token, jsmn_stream_token_t *iterator_token)
+int32_t jsmn_stream_utils_array_get_next_object_token(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *array_token, jsmn_stream_token_t *iterator_token)
 {
     // check params
     if (token_parser == NULL || array_token == NULL || iterator_token == NULL)
@@ -488,7 +488,7 @@ static void array_get_next_object_start_object_callback(void *user_arg)
     }
 }
 
-int32_t jsmn_stream_utils_object_get_size(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, uint32_t *size)
+int32_t jsmn_stream_utils_object_get_size(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, uint32_t *size)
 {
     // check params
     if (token_parser == NULL || token == NULL || size == NULL)
@@ -595,7 +595,7 @@ static void object_get_size_object_key_callback(const char *key, size_t key_leng
     }
 }
 
-int32_t jsmn_stream_utils_object_get_next_kv_tokens(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, jsmn_stream_token_t *key_iterator_token, jsmn_stream_token_t *value_iterator_token)
+int32_t jsmn_stream_utils_object_get_next_kv_tokens(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, jsmn_stream_token_t *key_iterator_token, jsmn_stream_token_t *value_iterator_token)
 {
     // check params
     if (token_parser == NULL || parent_token == NULL || key_iterator_token == NULL || value_iterator_token == NULL)
@@ -719,7 +719,7 @@ static void object_get_next_kv_primitive_callback(const char *value, size_t leng
     }
 }
 
-int32_t jsmn_stream_utils_get_object_token_containing_kv(new_jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, const char *value, jsmn_stream_token_t *object_token)
+int32_t jsmn_stream_utils_get_object_token_containing_kv(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, const char *value, jsmn_stream_token_t *object_token)
 {
     // check params
     if (token_parser == NULL || key == NULL || value == NULL || object_token == NULL)
@@ -838,7 +838,7 @@ static void get_object_token_containing_kv_primitive_callback(const char *value,
 }
 
 // accessors
-int32_t jsmn_stream_utils_get_bool_from_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, bool *value)
+int32_t jsmn_stream_utils_get_bool_from_token(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, bool *value)
 {
     if (token_parser == NULL || token == NULL || value == NULL)
     {
@@ -865,7 +865,7 @@ int32_t jsmn_stream_utils_get_bool_from_token(new_jsmn_stream_token_parser_t *to
 
 }
 
-int32_t jsmn_stream_utils_get_bool_by_key(new_jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, bool *value)
+int32_t jsmn_stream_utils_get_bool_by_key(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, bool *value)
 {
     if (token_parser == NULL || key == NULL || value == NULL)
     {
@@ -887,7 +887,7 @@ int32_t jsmn_stream_utils_get_bool_by_key(new_jsmn_stream_token_parser_t *token_
     }
 }
 
-int32_t jsmn_stream_utils_get_int_from_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, int32_t *value)
+int32_t jsmn_stream_utils_get_int_from_token(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, int32_t *value)
 {
     if (token_parser == NULL || token == NULL || value == NULL)
     {
@@ -904,7 +904,7 @@ int32_t jsmn_stream_utils_get_int_from_token(new_jsmn_stream_token_parser_t *tok
     return JSMN_STREAM_UTILS_ERROR_FAIL;
 }
 
-int32_t jsmn_stream_utils_get_int_by_key(new_jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, int32_t *value)
+int32_t jsmn_stream_utils_get_int_by_key(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, int32_t *value)
 {
     if (token_parser == NULL || key == NULL || value == NULL)
     {
@@ -926,7 +926,7 @@ int32_t jsmn_stream_utils_get_int_by_key(new_jsmn_stream_token_parser_t *token_p
     }
 }
  
-int32_t jsmn_stream_utils_get_uint_from_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, uint32_t *value)
+int32_t jsmn_stream_utils_get_uint_from_token(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, uint32_t *value)
 {
     if (token_parser == NULL || token == NULL || value == NULL)
     {
@@ -943,7 +943,7 @@ int32_t jsmn_stream_utils_get_uint_from_token(new_jsmn_stream_token_parser_t *to
     return JSMN_STREAM_UTILS_ERROR_FAIL;
 }
 
-int32_t jsmn_stream_utils_get_uint_by_key(new_jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, uint32_t *value)
+int32_t jsmn_stream_utils_get_uint_by_key(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, uint32_t *value)
 {
     if (token_parser == NULL || key == NULL || value == NULL)
     {
@@ -965,7 +965,7 @@ int32_t jsmn_stream_utils_get_uint_by_key(new_jsmn_stream_token_parser_t *token_
     }
 }
 
-int32_t jsmn_stream_utils_get_double_from_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, double *value)
+int32_t jsmn_stream_utils_get_double_from_token(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, double *value)
 {
     if (token_parser == NULL || token == NULL || value == NULL)
     {
@@ -982,7 +982,7 @@ int32_t jsmn_stream_utils_get_double_from_token(new_jsmn_stream_token_parser_t *
     return JSMN_STREAM_UTILS_ERROR_FAIL;
 }
 
-int32_t jsmn_stream_utils_get_double_by_key(new_jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, double *value)
+int32_t jsmn_stream_utils_get_double_by_key(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, double *value)
 {
     if (token_parser == NULL || key == NULL || value == NULL)
     {
@@ -1004,7 +1004,7 @@ int32_t jsmn_stream_utils_get_double_by_key(new_jsmn_stream_token_parser_t *toke
     }
 }
 
-int32_t jsmn_stream_utils_get_string_from_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, char *buffer, size_t buffer_size)
+int32_t jsmn_stream_utils_get_string_from_token(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, char *buffer, size_t buffer_size)
 {
     if (token_parser == NULL || token == NULL || buffer == NULL || buffer_size == 0)
     {
@@ -1024,7 +1024,7 @@ int32_t jsmn_stream_utils_get_string_from_token(new_jsmn_stream_token_parser_t *
     return JSMN_STREAM_UTILS_ERROR_FAIL;
 }
 
-int32_t jsmn_stream_utils_get_string_by_key(new_jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, char *buffer, size_t buffer_size)
+int32_t jsmn_stream_utils_get_string_by_key(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, char *buffer, size_t buffer_size)
 {
     if (token_parser == NULL || key == NULL || buffer == NULL || buffer_size == 0)
     {

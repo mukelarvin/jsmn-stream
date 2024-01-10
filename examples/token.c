@@ -1,4 +1,4 @@
-#include "../jsmn_stream_token.h"
+#include "../jsmn_stream_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
