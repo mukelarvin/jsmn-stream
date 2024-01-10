@@ -26,16 +26,48 @@ static void get_value_token_by_key_primitive_callback(const char *value, size_t 
 static void get_value_token_by_key_start_array_callback(void *user_arg);
 static void get_value_token_by_key_end_array_callback(void *user_arg);
 
-// get next object helper structs and callbacks
-typedef struct get_next_object_user_arg
+// array get size helper structs and callbacks
+typedef struct array_get_size_user_arg
+{
+    new_jsmn_stream_token_parser_t *token_parser;
+    jsmn_stream_parser *stream_parser;
+    jsmn_stream_token_t *array_token;
+    uint32_t size;
+    bool found_array;
+} array_get_size_user_arg_t;
+
+static void array_get_size_start_object_callback(void *user_arg);
+static void array_get_size_start_array_callback(void *user_arg);
+static void array_get_size_end_array_callback(void *user_arg);
+
+// object get size helper structs and callbacks
+typedef struct object_get_size_user_arg
+{
+    new_jsmn_stream_token_parser_t *token_parser;
+    jsmn_stream_parser *stream_parser;
+    jsmn_stream_token_t *object_token;
+    uint32_t size;
+    bool found_object;
+} object_get_size_user_arg_t;
+
+static void object_get_size_start_object_callback(void *user_arg);
+static void object_get_size_end_object_callback(void *user_arg);
+static void object_get_size_start_array_callback(void *user_arg);
+static void object_get_size_object_key_callback(const char *key, size_t key_length, void *user_arg);
+
+
+// array get next object helper structs and callbacks
+typedef struct array_get_next_object_user_arg
 {
     new_jsmn_stream_token_parser_t *token_parser;
     jsmn_stream_parser *stream_parser;
     jsmn_stream_token_t *parent_token;
     jsmn_stream_token_t *iterator_token;
-} get_next_object_user_arg_t;
+    bool found_object;
+} array_get_next_object_user_arg_t;
 
-static void get_next_object_start_object_callback(void *user_arg);
+static void array_get_next_object_end_array_callback(void *user_arg);
+static void array_get_next_object_start_object_callback(void *user_arg);
 
 // get next kv helper structs and callbacks
 typedef struct object_get_next_kv_user_arg
@@ -296,6 +328,89 @@ static void get_value_token_by_key_end_array_callback(void *user_arg)
    // @todo set the end of the array and parent as needed
 }
 
+int32_t jsmn_stream_utils_array_get_size(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, uint32_t *size)
+{
+    // check params
+    if (token_parser == NULL || token == NULL || size == NULL)
+    {
+        return JSMN_STREAM_UTILS_ERROR_INVALID_PARAM;
+    }
+
+    // init stream parser
+    jsmn_stream_parser stream_parser = {0};
+    jsmn_stream_callbacks_t jsmn_stream_token_callbacks =
+    {
+        .start_array_callback = array_get_size_start_array_callback,
+        .end_array_callback = array_get_size_end_array_callback,
+        .start_object_callback = array_get_size_start_object_callback,
+        .end_object_callback = NULL,
+        .object_key_callback = NULL,
+        .string_callback = NULL,
+        .primitive_callback = NULL
+    };
+
+    // init user arg
+    array_get_size_user_arg_t user_arg = 
+    {
+        .token_parser = token_parser,
+        .stream_parser = &stream_parser,
+        .array_token = token,
+        .size = 0,
+        .found_array = false
+    };
+
+    jsmn_stream_init(&stream_parser, &jsmn_stream_token_callbacks, &user_arg);
+    token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_INCOMPLETE;
+
+    if (parse_json(token_parser, &stream_parser) != JSMN_STREAM_UTILS_ERROR_NONE)
+    {
+        return JSMN_STREAM_UTILS_ERROR_FAIL;
+    }
+
+    *size = user_arg.size;
+
+    return JSMN_STREAM_UTILS_ERROR_NONE;
+}
+
+static void array_get_size_start_object_callback(void *user_arg)
+{
+    array_get_size_user_arg_t *arg = (array_get_size_user_arg_t *)user_arg;
+
+    if (arg->found_array)
+    {
+        if (arg->stream_parser->stack_height == arg->array_token->depth + 1)
+        {
+            arg->size++;
+        }
+    }
+}
+
+static void array_get_size_start_array_callback(void *user_arg)
+{
+    array_get_size_user_arg_t *arg = (array_get_size_user_arg_t *)user_arg;
+
+    if (arg->stream_parser->stack_height == arg->array_token->depth)
+    {
+        if (arg->token_parser->index == arg->array_token->start_position)
+        {        
+            arg->found_array = true;
+        }
+    }
+}
+
+static void array_get_size_end_array_callback(void *user_arg)
+{
+    array_get_size_user_arg_t *arg = (array_get_size_user_arg_t *)user_arg;
+
+    if (arg->found_array)
+    {
+        if (arg->stream_parser->stack_height == arg->array_token->depth)
+        {
+            arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
+        }
+    }
+}
+
 int32_t jsmn_stream_utils_array_get_next_object_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, jsmn_stream_token_t *iterator_token)
 {
     // check params
@@ -309,8 +424,8 @@ int32_t jsmn_stream_utils_array_get_next_object_token(new_jsmn_stream_token_pars
     jsmn_stream_callbacks_t jsmn_stream_token_callbacks =
     {
         .start_array_callback = NULL,
-        .end_array_callback = NULL,
-        .start_object_callback = get_next_object_start_object_callback,
+        .end_array_callback = array_get_next_object_end_array_callback,
+        .start_object_callback = array_get_next_object_start_object_callback,
         .end_object_callback = NULL,
         .object_key_callback = NULL,
         .string_callback = NULL,
@@ -318,12 +433,13 @@ int32_t jsmn_stream_utils_array_get_next_object_token(new_jsmn_stream_token_pars
     };
 
     // init user arg
-    get_next_object_user_arg_t user_arg = 
+    array_get_next_object_user_arg_t user_arg = 
     {
         .token_parser = token_parser,
         .stream_parser = &stream_parser,
         .parent_token = parent_token,
-        .iterator_token = iterator_token
+        .iterator_token = iterator_token,
+        .found_object = false
     };
 
     jsmn_stream_init(&stream_parser, &jsmn_stream_token_callbacks, &user_arg);
@@ -331,7 +447,7 @@ int32_t jsmn_stream_utils_array_get_next_object_token(new_jsmn_stream_token_pars
 
     int32_t result = parse_json(token_parser, &stream_parser);
 
-    if (token_parser->state == JSMN_STREAM_TOKEN_PARSER_STATE_INCOMPLETE)
+    if (user_arg.found_object == false)
     {
         return JSMN_STREAM_UTILS_ERROR_OBJECT_NOT_FOUND;
     }
@@ -341,9 +457,17 @@ int32_t jsmn_stream_utils_array_get_next_object_token(new_jsmn_stream_token_pars
     }
 }
 
-static void get_next_object_start_object_callback(void *user_arg)
+static void array_get_next_object_end_array_callback(void *user_arg)
 {
-    get_next_object_user_arg_t *arg = (get_next_object_user_arg_t *)user_arg;
+    array_get_next_object_user_arg_t *arg = (array_get_next_object_user_arg_t *)user_arg;
+
+    arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
+
+}
+
+static void array_get_next_object_start_object_callback(void *user_arg)
+{
+    array_get_next_object_user_arg_t *arg = (array_get_next_object_user_arg_t *)user_arg;
 
     // get to the right depth
     if (arg->stream_parser->stack_height == arg->parent_token->depth + 1)
@@ -358,7 +482,115 @@ static void get_next_object_start_object_callback(void *user_arg)
             arg->iterator_token->type = JSMN_STREAM_OBJECT;
             arg->iterator_token->depth = arg->stream_parser->stack_height;
 
+            arg->found_object = true;
             arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
+        }
+    }
+}
+
+int32_t jsmn_stream_utils_object_get_size(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, uint32_t *size)
+{
+    // check params
+    if (token_parser == NULL || token == NULL || size == NULL)
+    {
+        return JSMN_STREAM_UTILS_ERROR_INVALID_PARAM;
+    }
+
+    // init stream parser
+    jsmn_stream_parser stream_parser = {0};
+    jsmn_stream_callbacks_t jsmn_stream_token_callbacks =
+    {
+        .start_array_callback = object_get_size_start_array_callback,
+        .end_array_callback = NULL,
+        .start_object_callback = object_get_size_start_object_callback,
+        .end_object_callback = object_get_size_end_object_callback,
+        .object_key_callback = object_get_size_object_key_callback,
+        .string_callback = NULL,
+        .primitive_callback = NULL
+    };
+
+    // init user arg
+    object_get_size_user_arg_t user_arg = 
+    {
+        .token_parser = token_parser,
+        .stream_parser = &stream_parser,
+        .object_token = token,
+        .size = 0,
+        .found_object = false
+    };
+
+    jsmn_stream_init(&stream_parser, &jsmn_stream_token_callbacks, &user_arg);
+    token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_INCOMPLETE;
+
+    if (parse_json(token_parser, &stream_parser) != JSMN_STREAM_UTILS_ERROR_NONE)
+    {
+        return JSMN_STREAM_UTILS_ERROR_FAIL;
+    }
+
+    *size = user_arg.size;
+
+    return JSMN_STREAM_UTILS_ERROR_NONE;
+}
+
+static void object_get_size_start_object_callback(void *user_arg)
+{
+    object_get_size_user_arg_t *arg = (object_get_size_user_arg_t *)user_arg;
+
+    // if this is the object we are looking for
+    if (arg->stream_parser->stack_height == arg->object_token->depth)
+    {
+       if (arg->token_parser->index == arg->object_token->start_position)
+       {
+           arg->found_object = true;
+       }
+    }
+    else if (arg->found_object)
+    {
+        // this is a new object within the object we are looking for
+        if (arg->stream_parser->stack_height == arg->object_token->depth + 1)
+        {
+            arg->size++;
+        }
+    }
+}
+
+static void object_get_size_end_object_callback(void *user_arg)
+{
+    object_get_size_user_arg_t *arg = (object_get_size_user_arg_t *)user_arg;
+
+    if (arg->found_object)
+    {
+        // we are at the right depth so we know this is the end of the object
+        // object end is +1 of the object start depth
+        if (arg->stream_parser->stack_height == arg->object_token->depth + 1)
+        {
+            arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
+        }
+    }
+}
+
+static void object_get_size_start_array_callback(void *user_arg)
+{
+    object_get_size_user_arg_t *arg = (object_get_size_user_arg_t *)user_arg;
+
+    if (arg->found_object)
+    {
+        if (arg->stream_parser->stack_height == arg->object_token->depth + 1)
+        {
+            arg->size++;
+        }
+    }
+}
+
+static void object_get_size_object_key_callback(const char *key, size_t key_length, void *user_arg)
+{
+    object_get_size_user_arg_t *arg = (object_get_size_user_arg_t *)user_arg;
+
+    if (arg->found_object)
+    {
+        if (arg->stream_parser->stack_height == arg->object_token->depth + 1)
+        {
+            arg->size++;
         }
     }
 }
@@ -414,7 +646,11 @@ static void object_get_next_kv_end_object_callback(void *user_arg)
 {
     object_get_next_kv_user_arg_t *arg = (object_get_next_kv_user_arg_t *)user_arg;
     
-    arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
+	// object end is +1 of the object start depth
+	if (arg->stream_parser->stack_height == arg->parent_token->depth + 1)
+	{
+		arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
+	}
 }
 
 static void object_get_next_kv_object_key_callback(const char *key, size_t key_length, void *user_arg)
@@ -771,11 +1007,6 @@ int32_t jsmn_stream_utils_get_double_by_key(new_jsmn_stream_token_parser_t *toke
 int32_t jsmn_stream_utils_get_string_from_token(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, char *buffer, size_t buffer_size)
 {
     if (token_parser == NULL || token == NULL || buffer == NULL || buffer_size == 0)
-    {
-        return JSMN_STREAM_UTILS_ERROR_INVALID_PARAM;
-    }
-
-    if (token->type != JSMN_STREAM_STRING)
     {
         return JSMN_STREAM_UTILS_ERROR_INVALID_PARAM;
     }
