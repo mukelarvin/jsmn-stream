@@ -10,6 +10,7 @@ extern "C"
 {
 #endif
 
+#define JSMN_STREAM_UTILS_PARSE_BUFFER_SIZE 512
 #define JSMN_STREAM_POSITION_UNDEFINED (-1)
 
 enum get_char_callback_error

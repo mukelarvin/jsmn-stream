@@ -19,12 +19,10 @@ typedef struct get_value_token_by_key_user_arg
 } get_value_token_by_key_user_arg_t;
 
 static void get_value_token_by_key_start_object_callback(void *user_arg);
-static void get_value_token_by_key_end_object_callback(void *user_arg);
 static void get_value_token_by_key_object_key_callback(const char *key, size_t key_length, void *user_arg);
 static void get_value_token_by_key_string_callback(const char *value, size_t length, void *user_arg);
 static void get_value_token_by_key_primitive_callback(const char *value, size_t length, void *user_arg);
 static void get_value_token_by_key_start_array_callback(void *user_arg);
-static void get_value_token_by_key_end_array_callback(void *user_arg);
 
 // array get size helper structs and callbacks
 typedef struct array_get_size_user_arg
@@ -141,35 +139,42 @@ int32_t jsmn_stream_utils_init_token(jsmn_stream_token_t *token)
 
 static int32_t parse_json(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_parser *stream_parser)
 {
-    // right now we have to start parsing from the beginning of the json
-    // because jsmn was having an issue with key/value ordering if you don't start
-    // with an object tag
-    for (uint32_t i = 0; i < (uint32_t)token_parser->json_length; i++)
-    {
-        char ch;
-        if (token_parser->get_char_callback(i, 1, token_parser->user_arg, &ch) == JSMN_STREAM_GET_CHAR_CB_ERROR_NONE)
-        {
-            token_parser->index = i;
-            int32_t parse_result = jsmn_stream_parse(stream_parser, ch);
+    char ch[JSMN_STREAM_UTILS_PARSE_BUFFER_SIZE];
 
-            // note: JSMN_STREAM_ERROR_PART is okay because we have more chars coming.
-            if ( (parse_result == JSMN_STREAM_ERROR_NOMEM)
-                || (parse_result == JSMN_STREAM_ERROR_INVAL)
-                || (parse_result == JSMN_STREAM_ERROR_MAX_DEPTH)
-                || (token_parser->state == JSMN_STREAM_TOKEN_PARSER_STATE_ERROR ))
+    for (uint32_t i = 0; i < (uint32_t)token_parser->json_length; i += JSMN_STREAM_UTILS_PARSE_BUFFER_SIZE)
+    {
+        // Limit the size of the buffer to the remaining size of the JSON string
+        size_t size = (i + JSMN_STREAM_UTILS_PARSE_BUFFER_SIZE) > token_parser->json_length ? (token_parser->json_length - i) : JSMN_STREAM_UTILS_PARSE_BUFFER_SIZE;
+        
+        if (token_parser->get_char_callback(i, size, token_parser->user_arg, ch) == JSMN_STREAM_GET_CHAR_CB_ERROR_NONE)
+        {
+            // Iterate over each character in the buffer
+            for (int j = 0; j < JSMN_STREAM_UTILS_PARSE_BUFFER_SIZE; j++)
             {
-                return JSMN_STREAM_UTILS_ERROR_FAIL;
-            }
- 
-            if (token_parser->state == JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE)
-            {
-                return JSMN_STREAM_UTILS_ERROR_NONE;
+                token_parser->index = i + j;  // Set the index before parsing
+                int32_t parse_result = jsmn_stream_parse(stream_parser, ch[j]);
+
+                // Handle parse errors
+                if (parse_result == JSMN_STREAM_ERROR_NOMEM ||
+                    parse_result == JSMN_STREAM_ERROR_INVAL ||
+                    parse_result == JSMN_STREAM_ERROR_MAX_DEPTH ||
+                    token_parser->state == JSMN_STREAM_TOKEN_PARSER_STATE_ERROR)
+                {
+                    return JSMN_STREAM_UTILS_ERROR_FAIL;
+                }
+
+                // Check if parsing is complete
+                if (token_parser->state == JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE)
+                {
+                    return JSMN_STREAM_UTILS_ERROR_NONE;
+                }
             }
         }
     }
 
     return JSMN_STREAM_UTILS_ERROR_NONE;
 }
+
 
 int32_t jsmn_stream_utils_get_value_token_by_key(new_jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, jsmn_stream_token_t *value_token)
 {
@@ -184,9 +189,9 @@ int32_t jsmn_stream_utils_get_value_token_by_key(new_jsmn_stream_token_parser_t 
     jsmn_stream_callbacks_t jsmn_stream_token_callbacks =
     {
         .start_array_callback = get_value_token_by_key_start_array_callback,
-        .end_array_callback = get_value_token_by_key_end_array_callback,
+        .end_array_callback = NULL,
         .start_object_callback = get_value_token_by_key_start_object_callback,
-        .end_object_callback = get_value_token_by_key_end_object_callback,
+        .end_object_callback = NULL,
         .object_key_callback = get_value_token_by_key_object_key_callback,
         .string_callback = get_value_token_by_key_string_callback,
         .primitive_callback = get_value_token_by_key_primitive_callback
@@ -237,11 +242,6 @@ static void get_value_token_by_key_start_object_callback(void *user_arg)
     {
         arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
     }
-}
-
-static void get_value_token_by_key_end_object_callback(void *user_arg)
-{
-    // @todo set the end of the object and parent as needed
 }
 
 static void get_value_token_by_key_object_key_callback(const char *key, size_t key_length, void *user_arg)
@@ -321,11 +321,6 @@ static void get_value_token_by_key_start_array_callback(void *user_arg)
         // @todo find the end of the array
     }
 
-}
-
-static void get_value_token_by_key_end_array_callback(void *user_arg)
-{
-   // @todo set the end of the array and parent as needed
 }
 
 int32_t jsmn_stream_utils_array_get_size(new_jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, uint32_t *size)
