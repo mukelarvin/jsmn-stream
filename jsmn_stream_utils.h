@@ -40,8 +40,8 @@ typedef struct jsmn_stream_token
   jsmn_streamtype_t type;
   int32_t start_position; // start position in the JSON data string
   int32_t end_position; // end position in the JSON data string
-  int32_t parent_position; // parent position in the JSON data string
   int32_t depth; // object depth
+  jsmn_stream_parser stream_parser;
 } jsmn_stream_token_t;
 
 typedef int32_t (*get_char_callback_t)(uint32_t index, size_t length, void *user_arg, char *ch);
@@ -55,9 +55,9 @@ typedef struct new_jsmn_stream_token_parser
   uint32_t index;
 } jsmn_stream_token_parser_t;
 
-int32_t jsmn_stream_utils_init_parser(jsmn_stream_token_parser_t *parser, get_char_callback_t get_char_callback, size_t json_length, void *user_arg);
+int32_t jsmn_stream_utils_init_parser(jsmn_stream_token_parser_t *token_parser, get_char_callback_t get_char_callback, size_t json_length, void *user_arg);
 int32_t jsmn_stream_utils_init_token(jsmn_stream_token_t *token);
-int32_t jsmn_stream_utils_get_value_token_by_key(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, jsmn_stream_token_t *value_token);
+int32_t jsmn_stream_utils_get_value_token_by_key(jsmn_stream_token_parser_t *token_parser, const char *key, jsmn_stream_token_t *value_token);
 int32_t jsmn_stream_utils_array_get_size(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, uint32_t *size);
 int32_t jsmn_stream_utils_array_get_next_object_token(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, jsmn_stream_token_t *iterator_token);
 int32_t jsmn_stream_utils_object_get_size(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, uint32_t *size);
