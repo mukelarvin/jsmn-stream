@@ -4,7 +4,7 @@
 #include <string.h>
 
 // forward declarations
-static void copy_token(jsmn_stream_token_t *dest, jsmn_stream_token_t *src);
+
 static void copy_stream_parser(jsmn_stream_parser *dest, jsmn_stream_parser *src);
 static void update_object_token(jsmn_stream_token_t *token, uint32_t start_index);
 static void update_array_token(jsmn_stream_token_t *token, uint32_t start_index);
@@ -148,7 +148,7 @@ int32_t jsmn_stream_utils_init_token(jsmn_stream_token_t *token)
 
 }
 
-static void copy_token(jsmn_stream_token_t *dest, jsmn_stream_token_t *src)
+void jsmn_stream_utils_copy_token(jsmn_stream_token_t *dest, jsmn_stream_token_t *src)
 {
     dest->type = src->type;
     dest->start_position = src->start_position;
@@ -378,10 +378,10 @@ static void get_value_token_by_key_start_array_callback(void *user_arg)
     }
 }
 
-int32_t jsmn_stream_utils_array_get_size(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, uint32_t *size)
+int32_t jsmn_stream_utils_array_get_size(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *array_token, uint32_t *size)
 {
     // check params
-    if (token_parser == NULL || token == NULL || size == NULL)
+    if (token_parser == NULL || array_token == NULL || size == NULL)
     {
         return JSMN_STREAM_UTILS_ERROR_INVALID_PARAM;
     }
@@ -404,13 +404,16 @@ int32_t jsmn_stream_utils_array_get_size(jsmn_stream_token_parser_t *token_parse
     {
         .token_parser = token_parser,
         .stream_parser = &stream_parser,
-        .array_token = token,
+        .array_token = array_token,
         .size = 0,
         .found_array = false
     };
 
-    jsmn_stream_init(&stream_parser, &jsmn_stream_token_callbacks, &user_arg);
+    array_token->stream_parser.callbacks = jsmn_stream_token_callbacks;
+    array_token->stream_parser.user_arg = &user_arg;
+    copy_stream_parser(&stream_parser, &array_token->stream_parser);
     token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_INCOMPLETE;
+    token_parser->index = array_token->start_position;
 
     if (parse_json(token_parser, &stream_parser) != JSMN_STREAM_UTILS_ERROR_NONE)
     {
@@ -428,7 +431,7 @@ static void array_get_size_start_object_callback(void *user_arg)
 
     if (arg->found_array)
     {
-        if (arg->stream_parser->stack_height == arg->array_token->depth + 1)
+        if (arg->stream_parser->stack_height == arg->array_token->stream_parser.stack_height + 1)
         {
             arg->size++;
         }
@@ -439,7 +442,7 @@ static void array_get_size_start_array_callback(void *user_arg)
 {
     array_get_size_user_arg_t *arg = (array_get_size_user_arg_t *)user_arg;
 
-    if (arg->stream_parser->stack_height == arg->array_token->depth)
+    if (arg->stream_parser->stack_height == arg->array_token->stream_parser.stack_height)
     {
         if (arg->token_parser->index == arg->array_token->start_position)
         {        
@@ -452,7 +455,7 @@ static void array_get_size_end_array_callback(void *user_arg)
 {
     array_get_size_user_arg_t *arg = (array_get_size_user_arg_t *)user_arg;
 
-	if (arg->stream_parser->stack_height == arg->array_token->depth)
+	if (arg->stream_parser->stack_height == arg->array_token->stream_parser.stack_height)
 	{
 		arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
 	}
@@ -490,8 +493,11 @@ int32_t jsmn_stream_utils_array_get_next_object_token(jsmn_stream_token_parser_t
         .found_object = false
     };
 
-    jsmn_stream_init(&stream_parser, &jsmn_stream_token_callbacks, &user_arg);
+    iterator_token->stream_parser.callbacks = jsmn_stream_token_callbacks;
+    iterator_token->stream_parser.user_arg = &user_arg;
+    copy_stream_parser(&stream_parser, &iterator_token->stream_parser);
     token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_INCOMPLETE;
+    token_parser->index = iterator_token->start_position;
 
     int32_t result = parse_json(token_parser, &stream_parser);
 
@@ -510,7 +516,7 @@ static void array_get_next_object_end_array_callback(void *user_arg)
     array_get_next_object_user_arg_t *arg = (array_get_next_object_user_arg_t *)user_arg;
 
     // end of array is + 1 depth of array start
-	if (arg->stream_parser->stack_height == arg->array_token->depth + 1)
+	if (arg->stream_parser->stack_height == arg->array_token->stream_parser.stack_height + 1)
 	{
         if (arg->token_parser->index > arg->array_token->start_position)
         {
@@ -524,20 +530,16 @@ static void array_get_next_object_start_object_callback(void *user_arg)
     array_get_next_object_user_arg_t *arg = (array_get_next_object_user_arg_t *)user_arg;
 
     // get to the right depth and index
-    if ( (arg->stream_parser->stack_height == arg->array_token->depth + 1)
+    if ( (arg->stream_parser->stack_height == arg->array_token->stream_parser.stack_height + 1)
     	&& (arg->token_parser->index > arg->array_token->start_position))
     {
         // get to the right object
         if (arg->token_parser->index > arg->iterator_token->start_position)
         {        
-            // update token
-            arg->iterator_token->start_position = arg->token_parser->index;
-            arg->iterator_token->end_position = JSMN_STREAM_POSITION_UNDEFINED;
-            arg->iterator_token->type = JSMN_STREAM_OBJECT;
-            arg->iterator_token->depth = arg->stream_parser->stack_height;
-
-            arg->found_object = true;
             arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
+            arg->found_object = true;
+            update_object_token(arg->iterator_token, arg->token_parser->index);
+            copy_stream_parser(&arg->iterator_token->stream_parser, arg->stream_parser);
         }
     }
 }
@@ -573,8 +575,11 @@ int32_t jsmn_stream_utils_object_get_size(jsmn_stream_token_parser_t *token_pars
         .found_object = false
     };
 
-    jsmn_stream_init(&stream_parser, &jsmn_stream_token_callbacks, &user_arg);
+    copy_stream_parser(&stream_parser, &token->stream_parser);
+    stream_parser.callbacks = jsmn_stream_token_callbacks;
+    stream_parser.user_arg = &user_arg;
     token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_INCOMPLETE;
+    token_parser->index = token->start_position;
 
     if (parse_json(token_parser, &stream_parser) != JSMN_STREAM_UTILS_ERROR_NONE)
     {
@@ -591,7 +596,7 @@ static void object_get_size_start_object_callback(void *user_arg)
     object_get_size_user_arg_t *arg = (object_get_size_user_arg_t *)user_arg;
 
     // if this is the object we are looking for
-    if (arg->stream_parser->stack_height == arg->object_token->depth)
+    if (arg->stream_parser->stack_height == arg->object_token->stream_parser.stack_height)
     {
        if (arg->token_parser->index == arg->object_token->start_position)
        {
@@ -601,7 +606,7 @@ static void object_get_size_start_object_callback(void *user_arg)
     else if (arg->found_object)
     {
         // this is a new object within the object we are looking for
-        if (arg->stream_parser->stack_height == arg->object_token->depth + 1)
+        if (arg->stream_parser->stack_height == arg->object_token->stream_parser.stack_height + 1)
         {
             arg->size++;
         }
@@ -616,7 +621,7 @@ static void object_get_size_end_object_callback(void *user_arg)
     {
         // we are at the right depth so we know this is the end of the object
         // object end is +1 of the object start depth
-        if (arg->stream_parser->stack_height == arg->object_token->depth + 1)
+        if (arg->stream_parser->stack_height == arg->object_token->stream_parser.stack_height + 1)
         {
             arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
         }
@@ -629,7 +634,7 @@ static void object_get_size_start_array_callback(void *user_arg)
 
     if (arg->found_object)
     {
-        if (arg->stream_parser->stack_height == arg->object_token->depth + 1)
+        if (arg->stream_parser->stack_height == arg->object_token->stream_parser.stack_height + 1)
         {
             arg->size++;
         }
@@ -642,7 +647,7 @@ static void object_get_size_object_key_callback(const char *key, size_t key_leng
 
     if (arg->found_object)
     {
-        if (arg->stream_parser->stack_height == arg->object_token->depth + 1)
+        if (arg->stream_parser->stack_height == arg->object_token->stream_parser.stack_height + 1)
         {
             arg->size++;
         }
@@ -681,8 +686,11 @@ int32_t jsmn_stream_utils_object_get_next_kv_tokens(jsmn_stream_token_parser_t *
         .found_key_value_pair = false
     };
 
-    jsmn_stream_init(&stream_parser, &jsmn_stream_token_callbacks, &user_arg);
+    copy_stream_parser(&stream_parser, &key_iterator_token->stream_parser);
+    stream_parser.callbacks = jsmn_stream_token_callbacks;
+    stream_parser.user_arg = &user_arg;
     token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_INCOMPLETE;
+    token_parser->index = key_iterator_token->start_position;
 
     int32_t result = parse_json(token_parser, &stream_parser);
 
@@ -701,7 +709,7 @@ static void object_get_next_kv_end_object_callback(void *user_arg)
     object_get_next_kv_user_arg_t *arg = (object_get_next_kv_user_arg_t *)user_arg;
     
 	// object end is +1 of the object start depth
-	if (arg->stream_parser->stack_height == arg->parent_token->depth + 1)
+	if (arg->stream_parser->stack_height == arg->parent_token->stream_parser.stack_height + 1)
 	{
 		arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
 	}
@@ -712,16 +720,13 @@ static void object_get_next_kv_object_key_callback(const char *key, size_t key_l
     object_get_next_kv_user_arg_t *arg = (object_get_next_kv_user_arg_t *)user_arg;
 
     // get to the right depth
-    if (arg->stream_parser->stack_height == arg->parent_token->depth + 1)
+    if (arg->stream_parser->stack_height == arg->parent_token->stream_parser.stack_height + 1)
     {
         // get to the right object
         if (arg->token_parser->index > arg->key_iterator_token->end_position)
         {        
-            // update token
-            arg->key_iterator_token->start_position = arg->token_parser->index - key_length;
-            arg->key_iterator_token->end_position = arg->token_parser->index;
-            arg->key_iterator_token->type = JSMN_STREAM_KEY;
-            arg->key_iterator_token->depth = arg->stream_parser->stack_height;
+            update_key_token(arg->key_iterator_token, arg->token_parser->index - key_length, arg->token_parser->index);
+            copy_stream_parser(&arg->key_iterator_token->stream_parser, arg->stream_parser);
         }
     }
 }
@@ -731,19 +736,15 @@ static void object_get_next_kv_string_callback(const char *value, size_t length,
     object_get_next_kv_user_arg_t *arg = (object_get_next_kv_user_arg_t *)user_arg;
 
     // get to the right depth. plus 2 because the value's parent is the key
-    if (arg->stream_parser->stack_height == arg->parent_token->depth + 2)
+    if (arg->stream_parser->stack_height == arg->parent_token->stream_parser.stack_height + 2)
     {
         // get to the right object
         if (arg->token_parser->index > arg->value_iterator_token->end_position)
-        {        
-            // update token
-            arg->value_iterator_token->start_position = arg->token_parser->index - length;
-            arg->value_iterator_token->end_position = arg->token_parser->index;
-            arg->value_iterator_token->type = JSMN_STREAM_STRING;
-            arg->value_iterator_token->depth = arg->stream_parser->stack_height;
-
-            arg->found_key_value_pair = true;
+        {
             arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
+            arg->found_key_value_pair = true;
+            update_string_token(arg->value_iterator_token, arg->token_parser->index - length, arg->token_parser->index);
+            copy_stream_parser(&arg->value_iterator_token->stream_parser, arg->stream_parser);
         }
     }
 }
@@ -753,24 +754,20 @@ static void object_get_next_kv_primitive_callback(const char *value, size_t leng
     object_get_next_kv_user_arg_t *arg = (object_get_next_kv_user_arg_t *)user_arg;
 
     // get to the right depth. plus 2 because the value's parent is the key
-    if (arg->stream_parser->stack_height == arg->parent_token->depth + 2)
+    if (arg->stream_parser->stack_height == arg->parent_token->stream_parser.stack_height + 2)
     {
         // get to the right object
         if (arg->token_parser->index > arg->value_iterator_token->end_position)
         {        
-            // update token
-            arg->value_iterator_token->start_position = arg->token_parser->index - length;
-            arg->value_iterator_token->end_position = arg->token_parser->index;
-            arg->value_iterator_token->type = JSMN_STREAM_PRIMITIVE;
-            arg->value_iterator_token->depth = arg->stream_parser->stack_height;
-
-            arg->found_key_value_pair = true;
             arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
+            arg->found_key_value_pair = true;
+            update_primitive_token(arg->value_iterator_token, arg->token_parser->index - length, arg->token_parser->index);
+            copy_stream_parser(&arg->value_iterator_token->stream_parser, arg->stream_parser);
         }
     }
 }
 
-int32_t jsmn_stream_utils_get_object_token_containing_kv(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, const char *value, jsmn_stream_token_t *object_token)
+int32_t jsmn_stream_utils_get_object_token_containing_kv(jsmn_stream_token_parser_t *token_parser, const char *key, const char *value, jsmn_stream_token_t *object_token)
 {
     // check params
     if (token_parser == NULL || key == NULL || value == NULL || object_token == NULL)
@@ -796,14 +793,17 @@ int32_t jsmn_stream_utils_get_object_token_containing_kv(jsmn_stream_token_parse
     {
         .token_parser = token_parser,
         .stream_parser = &stream_parser,
-        .start_index = start_index,
+        .start_index = object_token->start_position,
         .key = (char *)key,
         .value = (char *)value,
         .object_token = object_token
     };
 
-    jsmn_stream_init(&stream_parser, &jsmn_stream_token_callbacks, &user_arg);
+    copy_stream_parser(&stream_parser, &object_token->stream_parser);
+    stream_parser.callbacks = jsmn_stream_token_callbacks;
+    stream_parser.user_arg = &user_arg;
     token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_INCOMPLETE;
+    token_parser->index = object_token->start_position;
 
     int32_t result = parse_json(token_parser, &stream_parser);
 
@@ -820,23 +820,19 @@ int32_t jsmn_stream_utils_get_object_token_containing_kv(jsmn_stream_token_parse
 static void get_object_token_containing_kv_start_object_callback(void *user_arg)
 {
     get_object_token_containing_kv_arg_t *arg = (get_object_token_containing_kv_arg_t *)user_arg;
-
-    // update token
-    arg->object_token->start_position = arg->token_parser->index;
-    arg->object_token->end_position = JSMN_STREAM_POSITION_UNDEFINED; // @todo
-    arg->object_token->type = JSMN_STREAM_OBJECT;
-    arg->object_token->depth = arg->stream_parser->stack_height;
+    update_object_token(arg->object_token, arg->token_parser->index);
+    copy_stream_parser(&arg->object_token->stream_parser, arg->stream_parser);
 }
 
 static void get_object_token_containing_kv_start_array_callback(void *user_arg)
 {
-    get_object_token_containing_kv_arg_t *arg = (get_object_token_containing_kv_arg_t *)user_arg;
+    // get_object_token_containing_kv_arg_t *arg = (get_object_token_containing_kv_arg_t *)user_arg;
 
-    // update token
-    arg->object_token->start_position = arg->token_parser->index;
-    arg->object_token->end_position = JSMN_STREAM_POSITION_UNDEFINED; // @todo
-    arg->object_token->type = JSMN_STREAM_ARRAY;
-    arg->object_token->depth = arg->stream_parser->stack_height;
+    // // update token
+    // arg->object_token->start_position = arg->token_parser->index;
+    // arg->object_token->end_position = JSMN_STREAM_POSITION_UNDEFINED; // @todo
+    // arg->object_token->type = JSMN_STREAM_ARRAY;
+    // arg->object_token->depth = arg->stream_parser->stack_height;
 }
 
 static void get_object_token_containing_kv_object_key_callback(const char *key, size_t key_length, void *user_arg)
@@ -914,15 +910,16 @@ int32_t jsmn_stream_utils_get_bool_from_token(jsmn_stream_token_parser_t *token_
 
 }
 
-int32_t jsmn_stream_utils_get_bool_by_key(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, bool *value)
+int32_t jsmn_stream_utils_get_bool_by_key(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, const char *key, bool *value)
 {
     if (token_parser == NULL || key == NULL || value == NULL)
     {
         return JSMN_STREAM_UTILS_ERROR_INVALID_PARAM;
     }
 
-    jsmn_stream_token_t value_token;
-    jsmn_stream_utils_init_token(&value_token);
+    // make a copy so the parent doesn't get updated
+    jsmn_stream_token_t value_token = {0};
+    jsmn_stream_utils_copy_token(&value_token, parent_token);
 
     int32_t result = jsmn_stream_utils_get_value_token_by_key(token_parser, key, &value_token);
 
@@ -953,15 +950,16 @@ int32_t jsmn_stream_utils_get_int_from_token(jsmn_stream_token_parser_t *token_p
     return JSMN_STREAM_UTILS_ERROR_FAIL;
 }
 
-int32_t jsmn_stream_utils_get_int_by_key(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, int32_t *value)
+int32_t jsmn_stream_utils_get_int_by_key(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, const char *key, int32_t *value)
 {
     if (token_parser == NULL || key == NULL || value == NULL)
     {
         return JSMN_STREAM_UTILS_ERROR_INVALID_PARAM;
     }
 
-    jsmn_stream_token_t value_token;
-    jsmn_stream_utils_init_token(&value_token);
+    // make a copy so the parent doesn't get updated
+    jsmn_stream_token_t value_token = {0};
+    jsmn_stream_utils_copy_token(&value_token, parent_token);
 
     int32_t result = jsmn_stream_utils_get_value_token_by_key(token_parser, key, &value_token);
 
@@ -992,15 +990,16 @@ int32_t jsmn_stream_utils_get_uint_from_token(jsmn_stream_token_parser_t *token_
     return JSMN_STREAM_UTILS_ERROR_FAIL;
 }
 
-int32_t jsmn_stream_utils_get_uint_by_key(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, uint32_t *value)
+int32_t jsmn_stream_utils_get_uint_by_key(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, const char *key, uint32_t *value)
 {
     if (token_parser == NULL || key == NULL || value == NULL)
     {
         return JSMN_STREAM_UTILS_ERROR_INVALID_PARAM;
     }
 
-    jsmn_stream_token_t value_token;
-    jsmn_stream_utils_init_token(&value_token);
+    // make a copy so the parent doesn't get updated
+    jsmn_stream_token_t value_token = {0};
+    jsmn_stream_utils_copy_token(&value_token, parent_token);
 
     int32_t result = jsmn_stream_utils_get_value_token_by_key(token_parser, key, &value_token);
 
@@ -1031,15 +1030,16 @@ int32_t jsmn_stream_utils_get_double_from_token(jsmn_stream_token_parser_t *toke
     return JSMN_STREAM_UTILS_ERROR_FAIL;
 }
 
-int32_t jsmn_stream_utils_get_double_by_key(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, double *value)
+int32_t jsmn_stream_utils_get_double_by_key(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, const char *key, double *value)
 {
     if (token_parser == NULL || key == NULL || value == NULL)
     {
         return JSMN_STREAM_UTILS_ERROR_INVALID_PARAM;
     }
 
-    jsmn_stream_token_t value_token;
-    jsmn_stream_utils_init_token(&value_token);
+    // make a copy so the parent doesn't get updated
+    jsmn_stream_token_t value_token = {0};
+    jsmn_stream_utils_copy_token(&value_token, parent_token);
 
     int32_t result = jsmn_stream_utils_get_value_token_by_key(token_parser, key, &value_token);
 
@@ -1073,15 +1073,16 @@ int32_t jsmn_stream_utils_get_string_from_token(jsmn_stream_token_parser_t *toke
     return JSMN_STREAM_UTILS_ERROR_FAIL;
 }
 
-int32_t jsmn_stream_utils_get_string_by_key(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, char *buffer, size_t buffer_size)
+int32_t jsmn_stream_utils_get_string_by_key(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, const char *key, char *buffer, size_t buffer_size)
 {
     if (token_parser == NULL || key == NULL || buffer == NULL || buffer_size == 0)
     {
         return JSMN_STREAM_UTILS_ERROR_INVALID_PARAM;
     }
 
-    jsmn_stream_token_t value_token;
-    jsmn_stream_utils_init_token(&value_token);
+    // make a copy so the parent doesn't get updated
+    jsmn_stream_token_t value_token = {0};
+    jsmn_stream_utils_copy_token(&value_token, parent_token);
 
     int32_t result = jsmn_stream_utils_get_value_token_by_key(token_parser, key, &value_token);
 
