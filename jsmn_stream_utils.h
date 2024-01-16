@@ -69,9 +69,9 @@ int32_t jsmn_stream_utils_get_object_token_containing_kv(jsmn_stream_token_parse
 int32_t jsmn_stream_utils_get_bool_from_token(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, bool *value);
 int32_t jsmn_stream_utils_get_bool_by_key(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, const char *key, bool *value);
 int32_t jsmn_stream_utils_get_int_from_token(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, int32_t *value);
-int32_t jsmn_stream_utils_get_int_by_key(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, int32_t *value);
+int32_t jsmn_stream_utils_get_int_by_key(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, const char *key, int32_t *value);
 int32_t jsmn_stream_utils_get_int_list_from_token(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, int32_t *value, uint32_t *size);
-int32_t jsmn_stream_utils_get_int_list_by_key(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, int32_t *value, uint32_t *size);
+int32_t jsmn_stream_utils_get_int_list_by_key(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, const char *key, int32_t *value, uint32_t *size);
 int32_t jsmn_stream_utils_get_uint_from_token(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, uint32_t *value);
 int32_t jsmn_stream_utils_get_uint_by_key(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, const char *key, uint32_t *value);
 int32_t jsmn_stream_utils_get_double_from_token(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, double *value);

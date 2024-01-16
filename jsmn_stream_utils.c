@@ -973,21 +973,22 @@ int32_t jsmn_stream_utils_get_int_by_key(jsmn_stream_token_parser_t *token_parse
     }
 }
 
-int32_t jsmn_stream_utils_get_int_list_by_key(jsmn_stream_token_parser_t *token_parser, int32_t start_index, const char *key, int32_t *value, uint32_t *size)
+int32_t jsmn_stream_utils_get_int_list_by_key(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, const char *key, int32_t *value, uint32_t *size)
 {
     if (token_parser == NULL || key == NULL || value == NULL || size == NULL)
     {
         return JSMN_STREAM_UTILS_ERROR_INVALID_PARAM;
     }
 
-    jsmn_stream_token_t array_token;
-    jsmn_stream_utils_init_token(&array_token);
+        // make a copy so the parent doesn't get updated
+    jsmn_stream_token_t value_token = {0};
+    jsmn_stream_utils_copy_token(&value_token, parent_token);
 
-    int32_t result = jsmn_stream_utils_get_value_token_by_key(token_parser, start_index, key, &array_token);
+    int32_t result = jsmn_stream_utils_get_value_token_by_key(token_parser, key, &value_token);
 
     if (result == JSMN_STREAM_UTILS_ERROR_NONE)
     {
-        return jsmn_stream_utils_get_int_list_from_token(token_parser, &array_token, value, size);
+        return jsmn_stream_utils_get_int_list_from_token(token_parser, &value_token, value, size);
     }
     else
     {
@@ -1004,11 +1005,7 @@ int32_t jsmn_stream_utils_get_int_list_from_token(jsmn_stream_token_parser_t *to
     }
 
     // get array size
-    uint32_t array_size = 0;
-    if (jsmn_stream_utils_array_get_size(token_parser, token, &array_size) != JSMN_STREAM_UTILS_ERROR_NONE)
-    {
-        return JSMN_STREAM_UTILS_ERROR_FAIL;
-    }
+    uint32_t array_size = &size;
 
     // get array tokens
     jsmn_stream_token_t* array_tokens = malloc(array_size * sizeof(jsmn_stream_token_t));
@@ -1017,21 +1014,21 @@ int32_t jsmn_stream_utils_get_int_list_from_token(jsmn_stream_token_parser_t *to
         jsmn_stream_utils_init_token(&array_tokens[i]);
     }
 
-    jsmn_stream_token_t iterator_token;
-    jsmn_stream_utils_init_token(&iterator_token);
+    // jsmn_stream_token_t iterator_token;
+    // jsmn_stream_utils_init_token(&iterator_token);
 
-    if (jsmn_stream_utils_array_get_next_object_token(token_parser, token, &iterator_token) != JSMN_STREAM_UTILS_ERROR_NONE)
-    {
-        return JSMN_STREAM_UTILS_ERROR_FAIL;
-    }
+    // if (jsmn_stream_utils_array_get_next_object_token(token_parser, token, &iterator_token) != JSMN_STREAM_UTILS_ERROR_NONE)
+    // {
+    //     return JSMN_STREAM_UTILS_ERROR_FAIL;
+    // }
 
-    for (uint32_t i = 0; i < array_size; i++)
-    {
-        if (jsmn_stream_utils_object_get_next_kv_tokens(token_parser, &iterator_token, &array_tokens[i], &iterator_token) != JSMN_STREAM_UTILS_ERROR_NONE)
-        {
-            return JSMN_STREAM_UTILS_ERROR_FAIL;
-        }
-    }
+    // for (uint32_t i = 0; i < array_size; i++)
+    // {
+    //     if (jsmn_stream_utils_object_get_next_kv_tokens(token_parser, &iterator_token, &array_tokens[i], &iterator_token) != JSMN_STREAM_UTILS_ERROR_NONE)
+    //     {
+    //         return JSMN_STREAM_UTILS_ERROR_FAIL;
+    //     }
+    // }
 
     // get values
     for (uint32_t i = 0; i < array_size; i++)
@@ -1041,8 +1038,6 @@ int32_t jsmn_stream_utils_get_int_list_from_token(jsmn_stream_token_parser_t *to
             return JSMN_STREAM_UTILS_ERROR_FAIL;
         }
     }
-
-    *size = array_size;
 
     return JSMN_STREAM_UTILS_ERROR_NONE;
 }
