@@ -3,17 +3,95 @@
 #include <stdlib.h>
 #include <string.h>
 
-// forward declarations
-
+/**
+ * @brief Copies the contents of one jsmn_stream_parser to another.
+ *
+ * This function copies the contents of the source jsmn_stream_parser to the destination jsmn_stream_parser.
+ * 
+ * Use this to resume parsing from the same point in the JSON string.
+ *
+ * @param dest The destination jsmn_stream_parser.
+ * @param src The source jsmn_stream_parser.
+ */
 static void copy_stream_parser(jsmn_stream_parser *dest, jsmn_stream_parser *src);
+
+
+/**
+ * @brief Updates the object token with the specified start index.
+ *
+ * This function is used to update the start index of an object token in the jsmn stream.
+ * 
+ * Sets the end index to JSMN_STREAM_POSITION_UNDEFINED. The end index is not currently supported for object tokens.
+ *
+ * @param token The object token to be updated.
+ * @param start_index The new start index for the object token.
+ */
 static void update_object_token(jsmn_stream_token_t *token, uint32_t start_index);
+
+
+/**
+ * @brief Updates the array token with the specified start index.
+ *
+ * This function is used to update the start index of an array token in the jsmn_stream_token_t structure.
+ * 
+ * Sets the end index to JSMN_STREAM_POSITION_UNDEFINED. The end index is not currently supported for array tokens.
+ *
+ * @param token The pointer to the jsmn_stream_token_t structure representing the array token.
+ * @param start_index The new start index value to be set for the array token.
+ */
 static void update_array_token(jsmn_stream_token_t *token, uint32_t start_index);
+
+
+/**
+ * @brief Updates the key token with the specified start and end indices.
+ *
+ * This function is used to update the key token of a JSON stream with the provided start and end indices.
+ *
+ * @param token The pointer to the jsmn_stream_token_t structure representing the key token.
+ * @param start_index The start index of the key in the JSON stream.
+ * @param end_index The end index of the key in the JSON stream.
+ */
 static void update_key_token(jsmn_stream_token_t *token, uint32_t start_index, uint32_t end_index);
+
+
+/**
+ * @brief Updates a string token with the specified start and end indices.
+ *
+ * This function is used to update the start and end indices of a string token in the jsmn_stream_token_t structure.
+ *
+ * @param token The pointer to the jsmn_stream_token_t structure representing the string token.
+ * @param start_index The start index of the string token.
+ * @param end_index The end index of the string token.
+ */
 static void update_string_token(jsmn_stream_token_t *token, uint32_t start_index, uint32_t end_index);
+
+
+/**
+ * @brief Updates the given primitive token with the specified start and end indices.
+ *
+ * This function is used to update a jsmn_stream_token_t structure representing a primitive token
+ * with the start and end indices of the token in the input stream.
+ *
+ * @param token The pointer to the jsmn_stream_token_t structure to be updated.
+ * @param start_index The start index of the token in the input stream.
+ * @param end_index The end index of the token in the input stream.
+ */
 static void update_primitive_token(jsmn_stream_token_t *token, uint32_t start_index, uint32_t end_index);
+
+
+/**
+ * @brief Parses a JSON string using the provided token parser and stream parser.
+ *
+ * This function is responsible for parsing a JSON string using the specified token parser and stream parser.
+ *
+ * @param token_parser The token parser used for parsing JSON tokens.
+ * @param stream_parser The stream parser used for parsing the JSON stream.
+ *
+ * @return Returns an integer value indicating the success or failure of the parsing operation.
+ *         JSMN_STREAM_UTILS_ERROR_NONE indicates success, while JSMN_STREAM_UTILS_ERROR_FAIL indicates failure.
+ */
 static int32_t parse_json(jsmn_stream_token_parser_t *token_parser, jsmn_stream_parser *stream_parser);
 
-// get value by key helper structs and callbacks
 typedef struct get_value_token_by_key_user_arg
 {
     jsmn_stream_token_parser_t *token_parser;
