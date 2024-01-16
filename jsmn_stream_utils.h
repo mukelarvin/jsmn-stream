@@ -40,7 +40,6 @@ typedef struct jsmn_stream_token
   jsmn_streamtype_t type;
   int32_t start_position; // start position in the JSON data string
   int32_t end_position; // end position in the JSON data string
-  int32_t depth; // object depth
   jsmn_stream_parser stream_parser;
 } jsmn_stream_token_t;
 

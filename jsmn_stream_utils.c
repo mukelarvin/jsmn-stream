@@ -103,7 +103,6 @@ typedef struct get_object_token_containing_kv_arg
 } get_object_token_containing_kv_arg_t;
 
 static void get_object_token_containing_kv_start_object_callback(void *user_arg);
-static void get_object_token_containing_kv_start_array_callback(void *user_arg);
 static void get_object_token_containing_kv_object_key_callback(const char *key, size_t key_length, void *user_arg);
 static void get_object_token_containing_kv_string_callback(const char *value, size_t length, void *user_arg);
 static void get_object_token_containing_kv_primitive_callback(const char *value, size_t length, void *user_arg);
@@ -136,7 +135,6 @@ int32_t jsmn_stream_utils_init_token(jsmn_stream_token_t *token)
     token->type = JSMN_STREAM_UNDEFINED;
     token->start_position = 0;
     token->end_position = 0;
-    token->depth = 0;
 
     token->stream_parser.state = JSMN_STREAM_PARSING;
 	token->stream_parser.stack_height = 0;
@@ -153,7 +151,6 @@ void jsmn_stream_utils_copy_token(jsmn_stream_token_t *dest, jsmn_stream_token_t
     dest->type = src->type;
     dest->start_position = src->start_position;
     dest->end_position = src->end_position;
-    dest->depth = src->depth;
     copy_stream_parser(&dest->stream_parser, &src->stream_parser);
 }
 
@@ -161,7 +158,7 @@ static void copy_stream_parser(jsmn_stream_parser *dest, jsmn_stream_parser *src
 {
     dest->state = src->state;
     dest->stack_height = src->stack_height;
-    dest->buffer_size = 0; //src->buffer_size; zero because when we re-use it we start at the beginning of the string/number
+    dest->buffer_size = 0; // zero because when we re-use it we start at the beginning of the string/number
     dest->callbacks = src->callbacks;
     dest->user_arg = src->user_arg;
 
@@ -779,7 +776,7 @@ int32_t jsmn_stream_utils_get_object_token_containing_kv(jsmn_stream_token_parse
     jsmn_stream_parser stream_parser = {0};
     jsmn_stream_callbacks_t jsmn_stream_token_callbacks =
     {
-        .start_array_callback = get_object_token_containing_kv_start_array_callback,
+        .start_array_callback = NULL,
         .end_array_callback = NULL,
         .start_object_callback = get_object_token_containing_kv_start_object_callback,
         .end_object_callback = NULL,
@@ -822,17 +819,6 @@ static void get_object_token_containing_kv_start_object_callback(void *user_arg)
     get_object_token_containing_kv_arg_t *arg = (get_object_token_containing_kv_arg_t *)user_arg;
     update_object_token(arg->object_token, arg->token_parser->index);
     copy_stream_parser(&arg->object_token->stream_parser, arg->stream_parser);
-}
-
-static void get_object_token_containing_kv_start_array_callback(void *user_arg)
-{
-    // get_object_token_containing_kv_arg_t *arg = (get_object_token_containing_kv_arg_t *)user_arg;
-
-    // // update token
-    // arg->object_token->start_position = arg->token_parser->index;
-    // arg->object_token->end_position = JSMN_STREAM_POSITION_UNDEFINED; // @todo
-    // arg->object_token->type = JSMN_STREAM_ARRAY;
-    // arg->object_token->depth = arg->stream_parser->stack_height;
 }
 
 static void get_object_token_containing_kv_object_key_callback(const char *key, size_t key_length, void *user_arg)
