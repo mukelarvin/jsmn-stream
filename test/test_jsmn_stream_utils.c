@@ -33,7 +33,12 @@ const char* global_json_data = "{\n"
     "            \"pin\": 1,\n"
     "            \"enabled\": \"true\",\n"
     "            \"offset\": -3\n"
-    "        }\n"
+    "        },\n"
+    "        \"array of primitives\": [\n"
+    "            1,\n"
+    "            2,\n"
+    "            3\n"
+    "        ]\n"
     "    }\n"
     " ]\n"
 "}";
@@ -146,6 +151,35 @@ void test_jsmn_stream_utils_array_get_next_object_token(void)
 
     // no third object at this depth
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_OBJECT_NOT_FOUND, jsmn_stream_utils_array_get_next_object_token(&parser, &array_token, &object_token));
+}
+
+void test_jsmn_stream_utils_array_get_next_primitive_token(void)
+{
+    jsmn_stream_token_parser_t parser;
+    jsmn_stream_token_t array_token;
+    jsmn_stream_token_t iterator_token;
+
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_init_parser(&parser, get_char_cb, strlen(global_json_data), (void *)global_json_data));
+
+    // get the array from the first key
+    jsmn_stream_utils_init_token(&array_token);
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "array of primitives", &array_token));
+
+    // first primitive
+    jsmn_stream_utils_copy_token(&iterator_token, &array_token);
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_array_get_next_primitive_token(&parser, &array_token, &iterator_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_PRIMITIVE, iterator_token.type);
+
+    // second primitive
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_array_get_next_primitive_token(&parser, &array_token, &iterator_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_PRIMITIVE, iterator_token.type);
+
+    // third primitive
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_array_get_next_primitive_token(&parser, &array_token, &iterator_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_PRIMITIVE, iterator_token.type);
+
+    // no fourth primitive
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_PRIMITIVE_NOT_FOUND, jsmn_stream_utils_array_get_next_primitive_token(&parser, &array_token, &iterator_token));
 }
 
 void test_jsmn_stream_utils_object_get_size(void)
