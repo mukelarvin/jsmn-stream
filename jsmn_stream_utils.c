@@ -21,7 +21,7 @@ static void copy_stream_parser(jsmn_stream_parser *dest, jsmn_stream_parser *src
  *
  * This function is used to update the start index of an object token in the jsmn stream.
  * 
- * Sets the end index to JSMN_STREAM_POSITION_UNDEFINED. The end index is not currently supported for object tokens.
+ * Sets the end index to 0. The end index is not currently supported for object tokens.
  *
  * @param token The object token to be updated.
  * @param start_index The new start index for the object token.
@@ -34,7 +34,7 @@ static void update_object_token(jsmn_stream_token_t *token, uint32_t start_index
  *
  * This function is used to update the start index of an array token in the jsmn_stream_token_t structure.
  * 
- * Sets the end index to JSMN_STREAM_POSITION_UNDEFINED. The end index is not currently supported for array tokens.
+ * Sets the end index to 0. The end index is not currently supported for array tokens.
  *
  * @param token The pointer to the jsmn_stream_token_t structure representing the array token.
  * @param start_index The new start index value to be set for the array token.
@@ -224,8 +224,8 @@ int32_t jsmn_stream_utils_init_token(jsmn_stream_token_t *token)
     }
 
     token->type = JSMN_STREAM_UNDEFINED;
-    token->start_position = 0;
-    token->end_position = 0;
+    token->start_index = 0;
+    token->end_index = 0;
 
     token->stream_parser.state = JSMN_STREAM_PARSING;
 	token->stream_parser.stack_height = 0;
@@ -240,8 +240,8 @@ int32_t jsmn_stream_utils_init_token(jsmn_stream_token_t *token)
 void jsmn_stream_utils_copy_token(jsmn_stream_token_t *dest, jsmn_stream_token_t *src)
 {
     dest->type = src->type;
-    dest->start_position = src->start_position;
-    dest->end_position = src->end_position;
+    dest->start_index = src->start_index;
+    dest->end_index = src->end_index;
     copy_stream_parser(&dest->stream_parser, &src->stream_parser);
 }
 
@@ -261,38 +261,38 @@ static void copy_stream_parser(jsmn_stream_parser *dest, jsmn_stream_parser *src
 
 static void update_object_token(jsmn_stream_token_t *token, uint32_t start_index)
 {
-    token->start_position = start_index;
-    token->end_position = JSMN_STREAM_POSITION_UNDEFINED; // @todo
+    token->start_index = start_index;
+    token->end_index = 0; // @todo
     token->type = JSMN_STREAM_OBJECT;
 }
 
 static void update_array_token(jsmn_stream_token_t *token, uint32_t start_index)
 {
-    token->start_position = start_index;
-    token->end_position = JSMN_STREAM_POSITION_UNDEFINED; // @todo
+    token->start_index = start_index;
+    token->end_index = 0; // @todo
     token->type = JSMN_STREAM_ARRAY;
 
 }
 
 static void update_key_token(jsmn_stream_token_t *token, uint32_t start_index, uint32_t end_index)
 {
-    token->start_position = start_index;
-    token->end_position = end_index;
+    token->start_index = start_index;
+    token->end_index = end_index;
     token->type = JSMN_STREAM_KEY;
 
 }
 
 static void update_string_token(jsmn_stream_token_t *token, uint32_t start_index, uint32_t end_index)
 {
-    token->start_position = start_index;
-    token->end_position = end_index;
+    token->start_index = start_index;
+    token->end_index = end_index;
     token->type = JSMN_STREAM_STRING;
 }
 
 static void update_primitive_token(jsmn_stream_token_t *token, uint32_t start_index, uint32_t end_index)
 {
-    token->start_position = start_index;
-    token->end_position = end_index;
+    token->start_index = start_index;
+    token->end_index = end_index;
     token->type = JSMN_STREAM_PRIMITIVE;
 
 }
@@ -369,7 +369,7 @@ int32_t jsmn_stream_utils_get_value_token_by_key(jsmn_stream_token_parser_t *tok
     {
         .token_parser = token_parser,
         .stream_parser = &stream_parser,
-        .start_index = value_token->start_position,
+        .start_index = value_token->start_index,
         .key = key,
         .value_token = value_token,
         .found_key = false
@@ -379,7 +379,7 @@ int32_t jsmn_stream_utils_get_value_token_by_key(jsmn_stream_token_parser_t *tok
     value_token->stream_parser.user_arg = &user_arg;
     copy_stream_parser(&stream_parser, &value_token->stream_parser);
     token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_INCOMPLETE;
-    token_parser->index = value_token->start_position;
+    token_parser->index = value_token->start_index;
 
     if (parse_json(token_parser, &stream_parser) != JSMN_STREAM_UTILS_ERROR_NONE)
     {
@@ -501,7 +501,7 @@ int32_t jsmn_stream_utils_array_get_size(jsmn_stream_token_parser_t *token_parse
     array_token->stream_parser.user_arg = &user_arg;
     copy_stream_parser(&stream_parser, &array_token->stream_parser);
     token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_INCOMPLETE;
-    token_parser->index = array_token->start_position;
+    token_parser->index = array_token->start_index;
 
     if (parse_json(token_parser, &stream_parser) != JSMN_STREAM_UTILS_ERROR_NONE)
     {
@@ -532,7 +532,7 @@ static void array_get_size_start_array_callback(void *user_arg)
 
     if (arg->stream_parser->stack_height == arg->array_token->stream_parser.stack_height)
     {
-        if (arg->token_parser->index == arg->array_token->start_position)
+        if (arg->token_parser->index == arg->array_token->start_index)
         {        
             arg->found_array = true;
         }
@@ -585,7 +585,7 @@ int32_t jsmn_stream_utils_array_get_next_object_token(jsmn_stream_token_parser_t
     iterator_token->stream_parser.user_arg = &user_arg;
     copy_stream_parser(&stream_parser, &iterator_token->stream_parser);
     token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_INCOMPLETE;
-    token_parser->index = iterator_token->start_position;
+    token_parser->index = iterator_token->start_index;
 
     int32_t result = parse_json(token_parser, &stream_parser);
 
@@ -606,7 +606,7 @@ static void array_get_next_object_end_array_callback(void *user_arg)
     // end of array is + 1 depth of array start
 	if (arg->stream_parser->stack_height == arg->array_token->stream_parser.stack_height + 1)
 	{
-        if (arg->token_parser->index > arg->array_token->start_position)
+        if (arg->token_parser->index > arg->array_token->start_index)
         {
             arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
         }
@@ -619,10 +619,10 @@ static void array_get_next_object_start_object_callback(void *user_arg)
 
     // get to the right depth and index
     if ( (arg->stream_parser->stack_height == arg->array_token->stream_parser.stack_height + 1)
-    	&& (arg->token_parser->index > arg->array_token->start_position))
+    	&& (arg->token_parser->index > arg->array_token->start_index))
     {
         // get to the right object
-        if (arg->token_parser->index > arg->iterator_token->start_position)
+        if (arg->token_parser->index > arg->iterator_token->start_index)
         {        
             arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
             arg->found_object = true;
@@ -667,7 +667,7 @@ int32_t jsmn_stream_utils_array_get_next_primitive_token(jsmn_stream_token_parse
     iterator_token->stream_parser.user_arg = &user_arg;
     copy_stream_parser(&stream_parser, &iterator_token->stream_parser);
     token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_INCOMPLETE;
-    token_parser->index = iterator_token->start_position;
+    token_parser->index = iterator_token->start_index;
 
     int32_t result = parse_json(token_parser, &stream_parser);
 
@@ -688,7 +688,7 @@ static void array_get_next_primitive_end_array_callback(void *user_arg)
     // end of array is + 1 depth of array start
     if (arg->stream_parser->stack_height == arg->array_token->stream_parser.stack_height + 1)
     {
-        if (arg->token_parser->index > arg->array_token->start_position)
+        if (arg->token_parser->index > arg->array_token->start_index)
         {
             arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
         }
@@ -701,10 +701,10 @@ static void array_get_next_primitive_primitive_callback(const char *value, size_
 
     // get to the right depth and index
     if ( (arg->stream_parser->stack_height == arg->array_token->stream_parser.stack_height + 1)
-        && (arg->token_parser->index > arg->array_token->start_position))
+        && (arg->token_parser->index > arg->array_token->start_index))
     {
         // get to the right object
-        if ((arg->token_parser->index - length) > arg->iterator_token->start_position)
+        if ((arg->token_parser->index - length) > arg->iterator_token->start_index)
         {        
             arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
             arg->found_primitive = true;
@@ -750,7 +750,7 @@ int32_t jsmn_stream_utils_object_get_size(jsmn_stream_token_parser_t *token_pars
     stream_parser.callbacks = jsmn_stream_token_callbacks;
     stream_parser.user_arg = &user_arg;
     token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_INCOMPLETE;
-    token_parser->index = token->start_position;
+    token_parser->index = token->start_index;
 
     if (parse_json(token_parser, &stream_parser) != JSMN_STREAM_UTILS_ERROR_NONE)
     {
@@ -769,7 +769,7 @@ static void object_get_size_start_object_callback(void *user_arg)
     // if this is the object we are looking for
     if (arg->stream_parser->stack_height == arg->object_token->stream_parser.stack_height)
     {
-       if (arg->token_parser->index == arg->object_token->start_position)
+       if (arg->token_parser->index == arg->object_token->start_index)
        {
            arg->found_object = true;
        }
@@ -861,7 +861,7 @@ int32_t jsmn_stream_utils_object_get_next_kv_tokens(jsmn_stream_token_parser_t *
     stream_parser.callbacks = jsmn_stream_token_callbacks;
     stream_parser.user_arg = &user_arg;
     token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_INCOMPLETE;
-    token_parser->index = key_iterator_token->start_position;
+    token_parser->index = key_iterator_token->start_index;
 
     int32_t result = parse_json(token_parser, &stream_parser);
 
@@ -894,7 +894,7 @@ static void object_get_next_kv_object_key_callback(const char *key, size_t key_l
     if (arg->stream_parser->stack_height == arg->parent_token->stream_parser.stack_height + 1)
     {
         // get to the right object
-        if (arg->token_parser->index > arg->key_iterator_token->end_position)
+        if (arg->token_parser->index > arg->key_iterator_token->end_index)
         {        
             update_key_token(arg->key_iterator_token, arg->token_parser->index - key_length, arg->token_parser->index);
             copy_stream_parser(&arg->key_iterator_token->stream_parser, arg->stream_parser);
@@ -910,7 +910,7 @@ static void object_get_next_kv_string_callback(const char *value, size_t length,
     if (arg->stream_parser->stack_height == arg->parent_token->stream_parser.stack_height + 2)
     {
         // get to the right object
-        if (arg->token_parser->index > arg->value_iterator_token->end_position)
+        if (arg->token_parser->index > arg->value_iterator_token->end_index)
         {
             arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
             arg->found_key_value_pair = true;
@@ -928,7 +928,7 @@ static void object_get_next_kv_primitive_callback(const char *value, size_t leng
     if (arg->stream_parser->stack_height == arg->parent_token->stream_parser.stack_height + 2)
     {
         // get to the right object
-        if (arg->token_parser->index > arg->value_iterator_token->end_position)
+        if (arg->token_parser->index > arg->value_iterator_token->end_index)
         {        
             arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
             arg->found_key_value_pair = true;
@@ -964,7 +964,7 @@ int32_t jsmn_stream_utils_get_object_token_containing_kv(jsmn_stream_token_parse
     {
         .token_parser = token_parser,
         .stream_parser = &stream_parser,
-        .start_index = object_token->start_position,
+        .start_index = object_token->start_index,
         .key = (char *)key,
         .value = (char *)value,
         .object_token = object_token
@@ -974,7 +974,7 @@ int32_t jsmn_stream_utils_get_object_token_containing_kv(jsmn_stream_token_parse
     stream_parser.callbacks = jsmn_stream_token_callbacks;
     stream_parser.user_arg = &user_arg;
     token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_INCOMPLETE;
-    token_parser->index = object_token->start_position;
+    token_parser->index = object_token->start_index;
 
     int32_t result = parse_json(token_parser, &stream_parser);
 
@@ -1051,7 +1051,7 @@ int32_t jsmn_stream_utils_get_bool_from_token(jsmn_stream_token_parser_t *token_
     }
 
     char value_str[6] = {0};
-    if (token_parser->get_char_callback(token->start_position, token->end_position - token->start_position, token_parser->user_arg, value_str) == JSMN_STREAM_GET_CHAR_CB_ERROR_NONE)
+    if (token_parser->get_char_callback(token->start_index, token->end_index - token->start_index, token_parser->user_arg, value_str) == JSMN_STREAM_GET_CHAR_CB_ERROR_NONE)
     {
         if (strncmp(value_str, "true", 4) == 0)
         {
@@ -1101,7 +1101,7 @@ int32_t jsmn_stream_utils_get_int_from_token(jsmn_stream_token_parser_t *token_p
     }
 
     char value_str[11] = {0};
-    if (token_parser->get_char_callback(token->start_position, token->end_position - token->start_position, token_parser->user_arg, value_str) == JSMN_STREAM_GET_CHAR_CB_ERROR_NONE)
+    if (token_parser->get_char_callback(token->start_index, token->end_index - token->start_index, token_parser->user_arg, value_str) == JSMN_STREAM_GET_CHAR_CB_ERROR_NONE)
     {
         *value = strtol(value_str, NULL, 10);
         return JSMN_STREAM_UTILS_ERROR_NONE;
@@ -1141,7 +1141,7 @@ int32_t jsmn_stream_utils_get_uint_from_token(jsmn_stream_token_parser_t *token_
     }
 
     char value_str[11] = {0};
-    if (token_parser->get_char_callback(token->start_position, token->end_position - token->start_position, token_parser->user_arg, value_str) == JSMN_STREAM_GET_CHAR_CB_ERROR_NONE)
+    if (token_parser->get_char_callback(token->start_index, token->end_index - token->start_index, token_parser->user_arg, value_str) == JSMN_STREAM_GET_CHAR_CB_ERROR_NONE)
     {
         *value = strtoul(value_str, NULL, 10);
         return JSMN_STREAM_UTILS_ERROR_NONE;
@@ -1181,7 +1181,7 @@ int32_t jsmn_stream_utils_get_double_from_token(jsmn_stream_token_parser_t *toke
     }
 
     char value_str[32] = {0};
-    if (token_parser->get_char_callback(token->start_position, token->end_position - token->start_position, token_parser->user_arg, value_str) == JSMN_STREAM_GET_CHAR_CB_ERROR_NONE)
+    if (token_parser->get_char_callback(token->start_index, token->end_index - token->start_index, token_parser->user_arg, value_str) == JSMN_STREAM_GET_CHAR_CB_ERROR_NONE)
     {
         *value = strtod(value_str, NULL);
         return JSMN_STREAM_UTILS_ERROR_NONE;
@@ -1220,12 +1220,12 @@ int32_t jsmn_stream_utils_get_string_from_token(jsmn_stream_token_parser_t *toke
         return JSMN_STREAM_UTILS_ERROR_INVALID_PARAM;
     }
 
-    if (token->end_position - token->start_position > buffer_size)
+    if (token->end_index - token->start_index > buffer_size)
     {
         return JSMN_STREAM_UTILS_ERROR_INVALID_PARAM;
     }
 
-    if (token_parser->get_char_callback(token->start_position, token->end_position - token->start_position, token_parser->user_arg, buffer) == JSMN_STREAM_GET_CHAR_CB_ERROR_NONE)
+    if (token_parser->get_char_callback(token->start_index, token->end_index - token->start_index, token_parser->user_arg, buffer) == JSMN_STREAM_GET_CHAR_CB_ERROR_NONE)
     {
         return JSMN_STREAM_UTILS_ERROR_NONE;
     }

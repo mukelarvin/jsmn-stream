@@ -11,7 +11,6 @@ extern "C"
 #endif
 
 #define JSMN_STREAM_UTILS_PARSE_BUFFER_SIZE 512
-#define JSMN_STREAM_POSITION_UNDEFINED (-1)
 
 enum get_char_callback_error
 {
@@ -39,8 +38,8 @@ enum jsmm_stream_token_parser_state
 typedef struct jsmn_stream_token
 {
   jsmn_streamtype_t type;
-  int32_t start_position; // start position in the JSON data string
-  int32_t end_position; // end position in the JSON data string
+  uint32_t start_index; // start position in the JSON data string
+  uint32_t end_index; // end position in the JSON data string
   jsmn_stream_parser stream_parser;
 } jsmn_stream_token_t;
 
