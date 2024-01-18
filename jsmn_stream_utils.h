@@ -11,7 +11,6 @@ extern "C"
 #endif
 
 #define JSMN_STREAM_UTILS_PARSE_BUFFER_SIZE 512
-#define JSMN_STREAM_POSITION_UNDEFINED (-1)
 
 enum get_char_callback_error
 {
@@ -26,6 +25,7 @@ enum jsmn_stream_utils_error
     JSMN_STREAM_UTILS_ERROR_INVALID_PARAM = -2,
     JSMN_STREAM_UTILS_ERROR_KEY_NOT_FOUND = -3,
     JSMN_STREAM_UTILS_ERROR_OBJECT_NOT_FOUND = -4,
+    JSMN_STREAM_UTILS_ERROR_PRIMITIVE_NOT_FOUND = -5
 };
 
 enum jsmm_stream_token_parser_state
@@ -38,8 +38,8 @@ enum jsmm_stream_token_parser_state
 typedef struct jsmn_stream_token
 {
   jsmn_streamtype_t type;
-  int32_t start_position; // start position in the JSON data string
-  int32_t end_position; // end position in the JSON data string
+  uint32_t start_index; // start position in the JSON data string
+  uint32_t end_index; // end position in the JSON data string
   jsmn_stream_parser stream_parser;
 } jsmn_stream_token_t;
 
@@ -60,6 +60,7 @@ void jsmn_stream_utils_copy_token(jsmn_stream_token_t *dest, jsmn_stream_token_t
 int32_t jsmn_stream_utils_get_value_token_by_key(jsmn_stream_token_parser_t *token_parser, const char *key, jsmn_stream_token_t *value_token);
 int32_t jsmn_stream_utils_array_get_size(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, uint32_t *size);
 int32_t jsmn_stream_utils_array_get_next_object_token(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, jsmn_stream_token_t *iterator_token);
+int32_t jsmn_stream_utils_array_get_next_primitive_token(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, jsmn_stream_token_t *iterator_token);
 int32_t jsmn_stream_utils_object_get_size(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *token, uint32_t *size);
 int32_t jsmn_stream_utils_object_get_next_kv_tokens(jsmn_stream_token_parser_t *token_parser, jsmn_stream_token_t *parent_token, jsmn_stream_token_t *key_iterator_token, jsmn_stream_token_t *value_iterator_token);
 int32_t jsmn_stream_utils_get_object_token_containing_kv(jsmn_stream_token_parser_t *token_parser, const char *key, const char *value, jsmn_stream_token_t *object_token);

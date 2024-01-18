@@ -33,7 +33,12 @@ const char* global_json_data = "{\n"
     "            \"pin\": 1,\n"
     "            \"enabled\": \"true\",\n"
     "            \"offset\": -3\n"
-    "        }\n"
+    "        },\n"
+    "        \"array of primitives\": [\n"
+    "            1,\n"
+    "            2,\n"
+    "            3\n"
+    "        ]\n"
     "    }\n"
     " ]\n"
 "}";
@@ -67,32 +72,32 @@ void test_jsmn_stream_utils_get_value_token_by_key(void)
     jsmn_stream_utils_init_token(&value_token);
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "operations", &value_token));
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_ARRAY, value_token.type);
-    TEST_ASSERT_EQUAL_INT32(17, value_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_POSITION_UNDEFINED, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(17, value_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(0, value_token.end_index);
 
     // first primitive
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "id", &value_token));
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_PRIMITIVE, value_token.type);
-    TEST_ASSERT_EQUAL_INT32(39, value_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(43, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(39, value_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(43, value_token.end_index);
 
     // first string
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "class", &value_token));
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_STRING, value_token.type);
-    TEST_ASSERT_EQUAL_INT32(85, value_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(88, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(85, value_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(88, value_token.end_index);
 
     // second instance of "id"
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "id", &value_token));
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_STRING, value_token.type);
-    TEST_ASSERT_EQUAL_INT32(189, value_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(193, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(189, value_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(193, value_token.end_index);
 
     // a string deeper down the tree
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "enabled", &value_token));
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_STRING, value_token.type);
-    TEST_ASSERT_EQUAL_INT32(500, value_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(504, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(500, value_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(504, value_token.end_index);
 
     // a string that doesn't exist
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_KEY_NOT_FOUND, jsmn_stream_utils_get_value_token_by_key(&parser, "does not exist", &value_token));
@@ -128,24 +133,53 @@ void test_jsmn_stream_utils_array_get_next_object_token(void)
     jsmn_stream_utils_init_token(&array_token);
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "operations", &array_token));
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_ARRAY, array_token.type);
-    TEST_ASSERT_EQUAL_INT32(17, array_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_POSITION_UNDEFINED, array_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(17, array_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(0, array_token.end_index);
 
     // first object
     jsmn_stream_utils_copy_token(&object_token, &array_token);
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_array_get_next_object_token(&parser, &array_token, &object_token));
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_OBJECT, object_token.type);
-    TEST_ASSERT_EQUAL_INT32(23, object_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_POSITION_UNDEFINED, object_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(23, object_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(0, object_token.end_index);
 
     // second object
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_array_get_next_object_token(&parser, &array_token, &object_token));
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_OBJECT, object_token.type);
-    TEST_ASSERT_EQUAL_INT32(280, object_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_POSITION_UNDEFINED, object_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(280, object_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(0, object_token.end_index);
 
     // no third object at this depth
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_OBJECT_NOT_FOUND, jsmn_stream_utils_array_get_next_object_token(&parser, &array_token, &object_token));
+}
+
+void test_jsmn_stream_utils_array_get_next_primitive_token(void)
+{
+    jsmn_stream_token_parser_t parser;
+    jsmn_stream_token_t array_token;
+    jsmn_stream_token_t iterator_token;
+
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_init_parser(&parser, get_char_cb, strlen(global_json_data), (void *)global_json_data));
+
+    // get the array from the first key
+    jsmn_stream_utils_init_token(&array_token);
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "array of primitives", &array_token));
+
+    // first primitive
+    jsmn_stream_utils_copy_token(&iterator_token, &array_token);
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_array_get_next_primitive_token(&parser, &array_token, &iterator_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_PRIMITIVE, iterator_token.type);
+
+    // second primitive
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_array_get_next_primitive_token(&parser, &array_token, &iterator_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_PRIMITIVE, iterator_token.type);
+
+    // third primitive
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_array_get_next_primitive_token(&parser, &array_token, &iterator_token));
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_PRIMITIVE, iterator_token.type);
+
+    // no fourth primitive
+    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_PRIMITIVE_NOT_FOUND, jsmn_stream_utils_array_get_next_primitive_token(&parser, &array_token, &iterator_token));
 }
 
 void test_jsmn_stream_utils_object_get_size(void)
@@ -182,37 +216,37 @@ void test_jsmn_stream_utils_object_get_next_kv_tokens(void)
     jsmn_stream_utils_init_token(&value_token);
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_value_token_by_key(&parser, "operation properties", &object_token));
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_OBJECT, object_token.type);
-    TEST_ASSERT_EQUAL_INT32(168, object_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_POSITION_UNDEFINED, object_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(168, object_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(0, object_token.end_index);
 
     // first key/value pair
     jsmn_stream_utils_init_token(&key_token);
     jsmn_stream_utils_init_token(&value_token);
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_object_get_next_kv_tokens(&parser, &object_token, &key_token, &value_token));
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_KEY, key_token.type);
-    TEST_ASSERT_EQUAL_INT32(183, key_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(185, key_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(183, key_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(185, key_token.end_index);
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_STRING, value_token.type);
-    TEST_ASSERT_EQUAL_INT32(189, value_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(193, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(189, value_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(193, value_token.end_index);
 
     // second key/value pair
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_object_get_next_kv_tokens(&parser, &object_token, &key_token, &value_token));
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_KEY, key_token.type);
-    TEST_ASSERT_EQUAL_INT32(209, key_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(215, key_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(209, key_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(215, key_token.end_index);
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_PRIMITIVE, value_token.type);
-    TEST_ASSERT_EQUAL_INT32(218, value_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(222, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(218, value_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(222, value_token.end_index);
 
     // third key/value pair
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_object_get_next_kv_tokens(&parser, &object_token, &key_token, &value_token));
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_KEY, key_token.type);
-    TEST_ASSERT_EQUAL_INT32(237, key_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(245, key_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(237, key_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(245, key_token.end_index);
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_STRING, value_token.type);
-    TEST_ASSERT_EQUAL_INT32(249, value_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(257, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(249, value_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(257, value_token.end_index);
 
     // no fourth key/value pair
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_OBJECT_NOT_FOUND, jsmn_stream_utils_object_get_next_kv_tokens(&parser, &object_token, &key_token, &value_token));    
@@ -229,14 +263,14 @@ void test_jsmn_stream_utils_get_object_token_containing_kv(void)
     jsmn_stream_utils_init_token(&value_token);
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_object_token_containing_kv(&parser, "id", "1234", &value_token));
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_OBJECT, value_token.type);
-    TEST_ASSERT_EQUAL_INT32(23, value_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_POSITION_UNDEFINED, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(23, value_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(0, value_token.end_index);
 
     // second object
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_NONE, jsmn_stream_utils_get_object_token_containing_kv(&parser, "id", "5678", &value_token));
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_OBJECT, value_token.type);
-    TEST_ASSERT_EQUAL_INT32(280, value_token.start_position);
-    TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_POSITION_UNDEFINED, value_token.end_position);
+    TEST_ASSERT_EQUAL_INT32(280, value_token.start_index);
+    TEST_ASSERT_EQUAL_INT32(0, value_token.end_index);
 
     // no object with this key/value pair
     TEST_ASSERT_EQUAL_INT32(JSMN_STREAM_UTILS_ERROR_OBJECT_NOT_FOUND, jsmn_stream_utils_get_object_token_containing_kv(&parser, "id", "9999", &value_token));
