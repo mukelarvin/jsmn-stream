@@ -1018,12 +1018,16 @@ static void get_object_token_containing_kv_string_callback(const char *value, si
 
     // do not update token, we want the parent object
     
-    if (arg->found_key == true)
+    if (arg->found_key == true && arg->token_parser->index >= arg->start_index)
     {
         if (strncmp(arg->value, value, length) == 0)
         {
             arg->found_value = true;
             arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
+        }
+        else
+        {
+            arg->found_key = false;
         }
     }
 }
