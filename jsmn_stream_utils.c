@@ -1006,6 +1006,8 @@ static void get_object_token_containing_kv_object_key_callback(const char *key, 
         if (strncmp(arg->key, key, key_length) == 0)
         {
             arg->found_key = true;
+            arg->token_parser->index = arg->token_parser->index + key_length;
+            arg->start_index = arg->token_parser->index;
         }
     }
 }
@@ -1016,12 +1018,16 @@ static void get_object_token_containing_kv_string_callback(const char *value, si
 
     // do not update token, we want the parent object
     
-    if (arg->found_key == true)
+    if (arg->found_key == true && arg->token_parser->index >= arg->start_index)
     {
         if (strncmp(arg->value, value, length) == 0)
         {
             arg->found_value = true;
             arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
+        }
+        else
+        {
+            arg->found_key = false;
         }
     }
 }
@@ -1032,12 +1038,16 @@ static void get_object_token_containing_kv_primitive_callback(const char *value,
 
     // do not update token, we want the parent object
     
-    if (arg->found_key == true)
+    if (arg->found_key == true && arg->token_parser->index >= arg->start_index)
     {
         if (strncmp(arg->value, value, length) == 0)
         {
             arg->found_value = true;
             arg->token_parser->state = JSMN_STREAM_TOKEN_PARSER_STATE_COMPLETE;
+        }
+        else
+        {
+            arg->found_key = false;
         }
     }
 }
